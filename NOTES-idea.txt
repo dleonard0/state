@@ -1,0 +1,287 @@
+
+OVERVIEW
+
+  This file describes a tool named 'state' whose function is to drive a
+  system of state files through process-associated transitions, in order
+  to reach the user-specified state.
+
+  For example, the command:
+
+	$ state a@active
+
+  has roughly the same effect as this shell command:
+
+	$ echo active > a/state
+
+  except that it also runs commands from a Makefile-like rules file.
+  Only when the commands associated with transitions to a@active succeed 
+  will the file named a/state be re-written to hold the string "active".
+
+  If you'd like a little more detail, the state tool example entails
+  it doing the following:
+
+    * It searches for transition rule files by searching for files named
+      "Staterules" and ".sr" files in the affected state directories, 
+      in this case files matching "a/*.sr".
+    * It reads the first line of 'a/state' to see if it is already
+      the goal string 'active' -- If it was then it would exit with success;
+    * Otherwise it uses the rules computes a transition graph to a@active,
+      and performs the transition commands to alter states until
+      the goal state a@active is reached;
+    * It updates the 'a/state' file to contain the word 'active';
+    * Success
+  
+
+UNIX INTEGRATION
+
+  The state tool tries to fit the unix tool philosophy: 
+  
+  * state is held in the filesystem as simple text strings;
+  * the tool does just one thing: drive states through transitions;
+  * the rule files are in simple, editable text format;
+  * state directories are open for extension;
+  * transition actions are expressed as shell commands;
+  * parallel instances of the tool interact correctly, concurrently
+    using the filesystem to communicate state
+
+
+STATERULES FILES
+
+  The state rule files (Staterules and *.sr) contain the transition rules
+  using a syntax similar to that used by make.
+
+  	<goal-patterns> : <required-states> [;]
+		<command>
+		...
+
+  It also contains a variable/macro system, nearly identical to GNU make:
+
+  	<variable-ident> {=|:=|?=} <macro-text>
+  
+  The <required-states> indicate what states must be reached first before
+  attempting a transition to a goal. Once the required states
+  have been reached, the transition the goal is committed to:
+  each <command> is run in sequence. 
+
+  If all the commands succeed, then the state file is updated with the
+  goal state. If a command fails, the state is not changed, and either
+  the tool fails, or it attempts to find another path to the goal.
+  
+  Consider this rule:
+
+	eth0@UP:
+		ifconfig eth0 up
+		ifconfig eth0 | grep up
+
+  Running 'state eth0@UP' will perform the given commands, then write the
+  token 'UP' into the file 'eth0'.
+
+  Multiple rules with the same goal state are permitted and useful.
+  The system will try each rule in order until one succeeds.
+  In the following example, running 'state eth0@UP' will try the
+  first two lines, and if either of them exit false, then it will
+  abandon the transition using that rule, then try again with the
+  second rule.
+
+  	eth0@UP:
+		ifconfig eth0 up
+		ifconfig eth0 | grep up
+  	eth0@UP:
+		ifconfig eth0 delete
+		ifconfig eth0 up --force
+
+
+DEPENDENCIES AND WEIGHTS
+
+  Dependencies of a goal G are the states required to have been reached
+  before a rule transition to the goal state G can be achieved. Once
+  the minimum number of dependencies for G have been achieved, 
+  the transition to G is attempted.
+
+  (TODO: How does locking work out here? What are the rules?)
+
+  Normally, dependencies are treated as a disjunction. Only one
+  of the dependent states needs to be achieved in order for the
+  transition to proceed:
+
+  	G : A B C		-- means A or B or C states are required
+
+  BUt conjunction can be indicated using &, which has higher precedence
+
+  	G : A B & C             -- means A or (B and C)
+
+  (The reason for disjunction-by-default is that macro expansion
+  uses whitespace to separate related states.)
+
+  The system searches the transition graph to find the lowest-cost, 
+  required state to attempt next. The cost of any transition defaults
+  to 100, but this can be altered with a .COST directive.
+  Transitions that have the same cost are treated as if their costs
+  were slightly adjusted so that earlier rules are slightly cheaper.
+
+  Cheapest transitions are always tried fist.
+
+  The states of a conjunctions ('&') are always tried simultaneously
+  and indepdendenly of each other.
+  
+  Failure to reach a required state will abort, leaving the system
+  in the intermediate state.
+
+RETRIES AND TIMEOUTS
+
+  State rules that are expected to fail can be annotated with 
+  .RETRIES for automatic retry (with a delay defaulting to 1 second).
+  They can also be aborted if they take too long, by using the
+  .TIMEOUT directive.
+
+	.RETRIES eth0@UP 20 0.5
+	.TIMEOUT eth0@UP 10
+
+  Such directives can also be specified within a rule, and then they
+  apply only to that rule.
+
+	eth0@UP:
+		.RETRIES 20
+		.TIMEOUT 10
+		ifconfig eth0 up
+		ifconfig eth0 | grep up
+
+  Outside of a rule, the first argument to such directives is a pattern
+  glob. This means that defaults can be specified using '*':
+
+  	.TIMEOUT * 60
+
+  Later directives always supercede earlier ones.
+
+PATTERNS AND MACROS
+
+  A macro is a string expanded at use time. Expansion involves
+  finding substrings that are variable references, function references,
+  or brace expressions are expanding them as follows:
+
+  	$(VAR) 			- environment expansion (terminal)
+	${VAR}			- same as $(VAR)
+  	a{b,c}d			- expands to: abd acd
+	{n..m}			- same as {n,n+1,n+2,...,m}
+				  for integers and single chars
+
+  A pattern is a string containing wildcards (globs). It is tested against
+  all the strings of an extrinsic "match environment", and results in
+  a match set of strings. In some cases when the match set is empty, the
+  literal pattern text is used.
+
+  Substrings of a pattern have the following meaning:
+
+	?			- match any single character
+  	*			- same as *(?)
+  	[xyz]			- character class; similar to @(x|y|z)
+  	?(pattern|...)		- match 0 or 1
+  	*(pattern|...)		- match 0 or more
+  	+(pattern|...)		- match 1 or more
+  	@(pattern|...)		- match 1 of the patterns
+  	!(pattern|...)		- match 0
+
+  For example, the pattern eth0@@(up|down) is the same as 
+  	@(eth0@up|eth0@down)
+
+RULE EXPANSION
+
+  The left-hand side of a rule definition is treated first as a macro
+  to expand, then as a glob pattern to match. The right-hand side
+  (the dependencies) are only ever treated as macros. So too the
+  script command lines.
+
+  The match environment is the union formed of the filesystem
+  (originated at the current working dirctory) and the set of all
+  the dependency strings of active goals.
+
+  A rule with multiple left-hand-side terms is exactly equivalent to
+  specifying the rule multiple times for each term. That is, The rule
+
+  	a b: DEP ; CMD
+
+  is exactly equivalent to
+
+  	a: DEP ; CMD
+	b: DEP ; CMD
+
+PROPERTIES
+
+  The file named a/prop/MAC is used to contain the property
+  definition of variable $(MAC) when rules regarding state a 
+  are running.
+
+  Properties are made available to scripts through the process
+  environment.
+
+  The property file can either be updated directly, otherwise
+  lines of the form <IDENT>=<value> are equivalent.
+
+  	eth0@UP:
+		ifconfig eth0 up
+		cat /sys/class/net/eth0/address >$(property MAC)
+		MAC=$(shell cat /sys/class/net/eth0/address)
+		echo eth0 mac address is $(MAC)
+	
+  Properties are made available to shell fragments through the enviroment.
+
+  		.UNSET MAC MY_ADDR
+  		.UNSET *_ADDR
+		.UNSET *
+		rm -f $(property MAC)
+
+DEPENDENCIES
+
+  A rule's goal is optionally followed by a list of dependency patterns.
+  If ANY ONE of the dependent patterns has been reached, then the current
+  goal can be progressed.
+
+  	eth0@UP: eth0@DOWN eth0@FROZEN
+
+
+STATE GROUPS
+
+  Sometimes it is useful to group states together so that dependencies
+  are simpler. 
+  
+  One way to do this is with careful naming of your state names using 
+  a prefix you can match on. For example, your states might be:
+  running/up running/paused stopped/down. Then you can specify patterns
+  such as eth0@running/* or eth0@stopped/*.
+
+  But that is boring. Another way is to make use of the special partition
+  definition
+
+	<running>: up paused
+  
+  specify a partitioning of states:
+
+  	.PARTITION eth* running = up paused
+
+  After this definition, the string
+  	eth1@<running>   
+  is pattern-converted to eth1@@(up|paused)
+  and macro-converted to eth1@{up,paused}
+
+
+BUGS
+
+  Consider these transition rules:
+
+	#  left <--> middle-left <--> middle-right <--> right
+  	*@left: *@middle-left
+	*@middle-left: *@left
+	*@middle-left: *@middle-right
+	*@middle-right: *@middle-left
+	*@middle-right: *@right
+	*@right: *@middle-right
+
+  Say the initial state is a@middle-right, and these two concurrent
+  instances are started:
+
+  	state a@left
+	state a@right
+
+  The resulting system may end up oscillating forever between
+  a@middle-left and @middle-right. 
+  

@@ -1,0 +1,51 @@
+
+Let a <state> be the pair <path>@<stateid>.
+
+Each rule describes:
+
+   * one possible transition to a state
+   * the prexisting states that have to have been obtained first
+   * a list of commands to run to transition to the state
+
+Together all transitions form a graph radiating out from the desired
+goal state. We want various modes:
+
+  1) optimal transition found by searching outwards for the closest
+     set of established statset of established state
+  2) try optimal transitions, but if a transition fails, restart
+     after making the failed transition more costly.
+  3) after reaching the goal state, continuously observe it, and
+     when it changes, re-effect the transition
+
+Locking
+
+  If two programs are trying to modify the same path (e.g. as part of an
+  incidental transition) then we need to have locked the state file so
+  they don't clobber each other.  If the program notices a state file has
+  been locked, then it should try choosing transitions in other (unlocked)
+  paths instead.
+
+  Let's say a transition is in progress and the state file is modified by a
+  (bad) process that didn't honour locking. What to do? Can't ignore it.
+  I think we should just abort the transition process.
+
+Graph construction algorithm (Dijkstra's).
+
+   1. start with the set F containing just the goal state, G.
+      mark the state G has having distance 0.
+   2. choose a state S from F
+       - if S has been reached, then 
+
+
+
+a: b1 b2 & b3
+b1: c1 c2
+b2: c3    __b2___c3
+b3: c4   /
+        *___b3___c4
+       /
+      a 
+       \ 
+        b1__c2
+         \
+	  c1
