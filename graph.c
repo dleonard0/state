@@ -138,6 +138,11 @@ epsilon_closure(const struct graph *g, bitset *s)
 	bitset_free(tocheck);
 }
 
+/*
+ * Equivalance set: a mapping from DFA node IDs to a set of NFA nodes.
+ * We need the nfa graph so that bitsets can be allocated with the same
+ * capacity as the number of nodes in the nfa.
+ */
 struct equiv {
 	const struct graph *nfa;
 	unsigned max, avail;
@@ -153,8 +158,14 @@ equiv_init(struct equiv *equiv, const struct graph *nfa)
 	equiv->set = 0;
 }
 
+/*
+ * Returns the bitset corresponding to DFA node i.
+ * Allocates storage in the equiv map as needed;
+ * initializes never-before requested bitsets to empty.
+ */
 static bitset *
-equiv_get(struct equiv *equiv, unsigned i) {
+equiv_get(struct equiv *equiv, unsigned i)
+{
 	if (equiv->avail <= i) {
 		unsigned oldavail = equiv->avail;
 		while (equiv->avail <= i) equiv->avail += 32;
@@ -176,7 +187,12 @@ equiv_cleanup(struct equiv *e) {
 	free(e->set);
 }
 
-/* Find or create the equivalent DFA state for a set of NFA nodes. */
+/*
+ * Find (or create new) an equivalent DFA state for a given
+ * set of NFA nodes.
+ * Searches the equiv map for the bitset bs.
+ * Note that this may add nodes to the DFA.
+ */
 static unsigned
 equiv_lookup(struct graph *dfa, struct equiv *equiv, const bitset *bs)
 {
@@ -204,6 +220,7 @@ equiv_lookup(struct graph *dfa, struct equiv *equiv, const bitset *bs)
 	return n;
 }
 
+/* Unsigned integer comparator for qsort */
 static int
 unsigned_cmp(const void *a, const void *b)
 {
@@ -231,14 +248,14 @@ unsigned_cmp(const void *a, const void *b)
  * @return the array of breakpoints.
  */
 static unsigned *
-cclass_breaks(const graph *nfa, const bitset *nodes, unsigned *nbreaks_return)
+cclass_breaks(const struct graph *nfa, const bitset *nodes, unsigned *nbreaks_return)
 {
 	unsigned ni;
 	unsigned i, j;
 
 	/* Count the number of intervals */
 	unsigned nintervals = 0;
-	bitset_for(ni, bs) {
+	bitset_for(ni, nodes) {
 		const struct node *n = &nfa->nodes[ni];
 		for (j = 0; j < n->ntrans; ++j) {
 			const cclass *cc = n->trans[j].cclass;
@@ -254,10 +271,11 @@ cclass_breaks(const graph *nfa, const bitset *nodes, unsigned *nbreaks_return)
 		return NULL;
 	}
 
-	/* build the non-normalized set of cclass breaks */
+	/* Build the non-normalized set of cclass breaks
+	 * by just collecting all lo and hi values */
 	unsigned *breaks = malloc(nintervals * 2 * sizeof (unsigned));
 	unsigned nbreaks = 0;
-	bitset_for(ni, bs) {
+	bitset_for(ni, nodes) {
 		const struct node *n = &nfa->nodes[ni];
 		for (j = 0; j < n->ntrans; ++j) {
 			const cclass *cc = n->trans[j].cclass;
@@ -270,17 +288,24 @@ cclass_breaks(const graph *nfa, const bitset *nodes, unsigned *nbreaks_return)
 		}
 	}
 
-	/* normalize into a sorted set */
+	/* Sort the array of breaks */
 	qsort(breaks, nbreaks, sizeof *breaks, unsigned_cmp);
-	unsigned last = breaks[0];
-	unsigned len = 1;
+
+	/* Remove duplicates */
+	unsigned lastbreak = breaks[0];
+	unsigned newlen = 1;
 	for (i = 1; i < nbreaks; ++i) {
-		if (breaks[i] != last) {
-			last = breaks[len++] = breaks[i];
+		if (breaks[i] != lastbreak) {
+			lastbreak = breaks[newlen++] = breaks[i];
 		}
 	}
-	*nbreaks_return = len;
-	return realloc(breaks, len * sizeof *breaks);
+	nbreaks = newlen;
+
+	/* Reduce storage overhead */
+	breaks = realloc(breaks, nbreaks * sizeof *breaks);
+
+	*nbreaks_return = nbreaks;
+	return breaks;
 }
 
 /*
@@ -306,42 +331,62 @@ make_dfa(struct graph *dfa, const struct graph *nfa)
 	equiv_lookup(dfa, &equiv, bs) /* == 0 */;
 	bitset_free(bs);
 
-
+	/*
+	 * Iterate ei over the unprocessed DFA nodes.
+	 * Each iteration may add more DFA nodes, but it
+	 * won't add duplicates.
+	 */
 	for (ei = 0; ei < dfa->nnodes; ei++) {
 		const struct node *en = &dfa->nodes[ei];
-		bs = equiv_get(&equiv, ei);
+		unsigned nbreaks, bi;
+		unsigned *breaks;
+		struct bitset *src;
 
-		unsigned nbreaks;
-		unsigned *breaks = cclass_breaks(nfa, bs, &nbreaks);
+		/* src is the set of NFA nodes corresponding to
+		 * the current DFA node ei */
+		src = equiv_get(&equiv, ei);
 
-		MOREEEEE
+		/* We want to combine all the transition cclasses
+		 * of src together, and then efficiently walk over
+		 * their members. 
+		 * The breaks list speeds this up because if 
+		 * characters c1,c2 appear adjacent in the breaks list,
+		 * then we can reason that for any cclass in any src
+		 * transitions, either:
+		 *   [c1,c2) is wholly within that cclass
+		 *   [c1,c2) is wholly outside that cclass
+		 */
+		breaks = cclass_breaks(nfa, src, &nbreaks);
+		for (bi = 1; bi < nbreaks; ++bi) {
+			const unsigned lo = breaks[bi - 1];
+			const unsigned hi = breaks[bi];
+			unsigned ni, di, j;
 
-		for (ci = 0; ci < allcc->nintervals; ++ci) {
-		    const unsigned lo = allcc->interval[ci].lo;
-		    const unsigned hi = allcc->interval[ci].hi;
-		    unsigned ch;
-		    for (ch = lo; ch < hi; ++ch) {
-		        unsigned di;
-		    	bitset *dest = bitset_alloca(nfa->nnodes);
-			bitset_for(ni, bs) {
+			/* Find the set of NFA states, dest, to which
+			 * the cclass [lo,hi) transitions to from the
+			 * src set. We can do this by just checking for
+			 * membership of lo. */
+			bitset *dest = bitset_alloca(nfa->nnodes);
+			bitset_for(ni, src) {
 				const struct node *n = &nfa->nodes[ni];
 				for (j = 0; j < n->ntrans; ++j) {
 					if (n->trans[j].cclass &&
-					    cclass_contains_ch(
-					        n->trans[j].cclass, ch))
+					    cclass_contains_ch(n->trans[j].cclass, lo))
 					{
-						bitset_insert(dest, 
-							n->trans[j].dest);
+						bitset_insert(dest, n->trans[j].dest);
 					}
 				}
 			}
+			/* Expand the resulting dest set to its epsilon closure */
 			epsilon_closure(nfa, dest);
-			/* ch -> {dest} in the DFA */
 
-			/* find or make a new node di in the dfa for {dest} */
+			/* Find or make di, the DFA equivalent node for {dest} */
 			di = equiv_lookup(dfa, &equiv, dest);
 
-			/* Add the ch->di to en */
+			/* (Recompute pointers here because nodes may have been realloced) */
+			en = &dfa->nodes[ei];
+
+			/* Create or find an existing transition from ei->di */
 			struct transition *t = NULL;
 			for (j = 0; j < en->ntrans; ++j) {
 				if (en->trans[j].dest == di) {
@@ -353,13 +398,14 @@ make_dfa(struct graph *dfa, const struct graph *nfa)
 				t = graph_new_trans(dfa, ei, di);
 				t->cclass = cclass_new();
 			}
-			cclass_add(t->cclass, ch, ch + 1);
-		    }
+
+			/* Add the transition along [lo,hi) into the DFA */
+			cclass_add(t->cclass, lo, hi);
 		}
-		cclass_free(allcc);
+		free(breaks);
 	}
 
-	/* TODO: repeatedly remove duplicate states */
+	/* TODO: remove duplicate states */
 
 	equiv_cleanup(&equiv);
 }
