@@ -183,8 +183,12 @@ equiv_get(struct equiv *equiv, unsigned i)
 }
 
 static void
-equiv_cleanup(struct equiv *e) {
-	free(e->set);
+equiv_cleanup(struct equiv *equiv) {
+	unsigned i;
+
+	for (i = 0; i < equiv->max; ++i)
+		bitset_free(equiv->set[i]);
+	free(equiv->set);
 }
 
 /*
