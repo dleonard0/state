@@ -54,15 +54,17 @@ assert_match_(const char *file, int lineno, int expect_accept, const char *globe
 		if (expect_accept && !accepted) {
 			globs_dump(g, globexp, state);
 			fprintf(stderr, "%s:%d: glob '%s' failed to accept\n"
-				        "  string '%s'\n",
-				       file, lineno, globexp, text);
+				        "  string '%s'\n"
+					"  at      %*s^\n",
+				       file, lineno, globexp, text, t-text, "");
 			abort();
 		}
 		if (!expect_accept && accepted) {
 			globs_dump(g, globexp, state);
 			fprintf(stderr, "%s:%d: glob '%s' failed to reject\n"
-				        "  string '%s'\n",
-				       file, lineno, globexp, text);
+				        "  string '%s'\n"
+					"  at      %*s^\n",
+				       file, lineno, globexp, text, t-text, "");
 			abort();
 		}
 	}
@@ -114,19 +116,20 @@ main()
 		globs_free(g);
 	}
 	{
-		assert_accepts("", 
-				"",
+		assert_accepts("", "",
 				NOT, "a", "0");
-
-		assert_accepts("[abc]", 
-				"a","b","c",
+		assert_accepts("[abc]", "a","b","c",
 				NOT, "x",""," a", "aa");
-
-		assert_accepts("@(a|b|c)", 
-				"a", "b", "c",
+		assert_accepts("@(a|b|c)", "a", "b", "c",
 				NOT, "", "d", "abc", "a|b|c");
 		assert_accepts("@(a)", "a",
 				NOT, "", "aa");
+		assert_accepts("foo*bar", "foobar", "foo-bar", "foofoobar", "foobarbar",
+				NOT, "foo", "bar", "fobar", "fbar", "foo/bar");
+		assert_accepts("?(@(a|b)|c)", "", "a", "b", "c",
+				NOT, "ac", "d");
+		assert_accepts("*(*(a))", "", "a", "aa", "aaa",
+				NOT, " a");
 	}
 	return 0;
 }
