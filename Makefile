@@ -17,8 +17,8 @@ t-scope:  scope-t.o  str.o dict.o atom.o scope.o
 t-parser: parser-t.o str.o dict.o atom.o macro.o parser.o
 t-cclass: cclass-t.o cclass.o
 t-bitset: bitset-t.o bitset.o
-t-graph:  graph-t.o  cclass.o bitset.o graph.o
-t-globs:  globs-t.o  cclass.o bitset.o graph.o str.o globs.o
+t-graph:  graph-t.o  cclass.o bitset.o graph.o graph-dbg.o
+t-globs:  globs-t.o  cclass.o bitset.o graph.o str.o globs.o graph-dbg.o
 t-vector: vector-t.o
 #t-match:  match-t.o  cclass.o bitset.o graph.o str.o match.o
 $(TESTS):

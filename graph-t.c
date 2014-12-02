@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "graph.h"
+#include "graph-dbg.h"
 
 /* Debug is set to 1 if environment variable $DEBUG is defined */
 static int Debug = 0;
@@ -175,81 +176,6 @@ make_nfa(const char *s)
 	return g;
 }
 
-#define EPSILON_STR "\xce\xb5"	/* epsilon character in UTF-8 */
-
-/* prints a character from a cclass (only used in debugging) */
-static void
-put_cchar(unsigned ch) {
-	if (ch == '\\' || ch == '-' || ch == ']')
-		putchar('\\');
-	if (ch < ' ')
-		printf("\\x%02x", ch);
-	else if (ch < 0x7f)
-		putchar(ch & 0x7f);
-	else if (ch < 0x10000)
-		printf("\\u%04x", ch);
-	else 
-		printf("\\u+%06x", ch);
-}
-
-/* dumps an entire graph structure to stdout (only used in debugging) */
-static void
-dump_graph(const struct graph *g, int current)
-{
-	unsigned i, j, k;
-	for (i = 0; i < g->nnodes; ++i) {
-		const struct node *n = &g->nodes[i];
-		printf("%c%4u: %c ",
-		    current >= 0 && current == i ? '*' : ' ',
-		    i, n->nfinals ? 'F' : ' ');
-		for (j = 0; j < n->ntrans; ++j) {
-			const struct transition *t = &n->trans[j];
-			const cclass *cc = t->cclass;
-			if (!cc)
-				printf(EPSILON_STR);
-			else {
-				if (cc->nintervals == 1 && 
-				    cc->interval[0].lo + 1 == 
-				    		cc->interval[0].hi)
-				{
-					unsigned ch = cc->interval[0].lo;
-					if (ch == '.' || ch == '|' ||
-					    ch == '(' || ch == ')' ||
-					    ch == '*' || ch == '?' ||
-					    ch == '[') 
-					{
-						putchar('\\');
-					}
-					put_cchar(ch);
-				} else {
-					putchar('[');
-					for (k = 0; k < cc->nintervals; ++k) {
-						unsigned lo, hi;
-						lo = cc->interval[k].lo;
-						hi = cc->interval[k].hi;
-						put_cchar(lo);
-						if (lo + 1 < hi) {
-							putchar('-');
-							put_cchar(hi - 1);
-						}
-					}
-					putchar(']');
-				}
-			}
-			printf("->%u ", t->dest);
-		}
-		if (n->nfinals) {
-			printf("\t\tF={");
-			for (j = 0; j < n->nfinals; ++j) {
-				if (j) putchar(' ');
-				printf("\"%s\"", (const char *)n->finals[j]);
-			}
-			putchar('}');
-		}
-		putchar('\n');
-	}
-}
-
 /** Checks a graph to see if it really is a DFA. Aborts on error */
 static void
 assert_deterministic(const struct graph *g)
@@ -333,7 +259,7 @@ testenv(const char *e)
 	if (Debug) { 					\
 		printf("%s:%u: %s =\n", 		\
 			__FILE__, __LINE__, #dfa);	\
-		dump_graph(dfa, -1);			\
+		graph_dump(stdout, dfa, -1);		\
 	}						\
     } while (0)
 
