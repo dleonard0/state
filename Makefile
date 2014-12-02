@@ -7,7 +7,7 @@ CFLAGS += -std=gnu99
 default: check
 
 TESTS  = t-str t-dict t-atom t-macro t-scope t-parser t-cclass t-bitset t-graph
-TESTS += t-globs
+TESTS += t-globs t-vector
 
 t-str:    str-t.o    str.o
 t-dict:   dict-t.o   dict.o
@@ -19,16 +19,16 @@ t-cclass: cclass-t.o cclass.o
 t-bitset: bitset-t.o bitset.o
 t-graph:  graph-t.o  cclass.o bitset.o graph.o
 t-globs:  globs-t.o  cclass.o bitset.o graph.o str.o globs.o
+t-vector: vector-t.o
 #t-match:  match-t.o  cclass.o bitset.o graph.o str.o match.o
 $(TESTS):
 	$(LINK.c) -o $@ $^
 
 check: $(TESTS:=.tested)
 %.tested: %
-	@printf '%-10s ... ' $<; \
-	 if ./$<; \
-	 then  echo PASS; \
-	 else  echo FAIL; exit 1; \
+	@if $(abspath $<); \
+	 then printf '%-10s ... PASS\n' $(basename $<); \
+	 else printf '%-10s ... FAIL\n' $(basename $<); exit 1; \
 	 fi
 .PHONY: check 
 
