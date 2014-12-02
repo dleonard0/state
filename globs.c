@@ -132,7 +132,13 @@ parse_group(struct graph *g, stri *i, unsigned kind)
 	stri_inc(*i); /* '(' */
 
 	struct subgraph alt = subgraph_frame(g);
+	int first = 1;
 	while (stri_more(*i) && stri_at(*i) != ')') {
+		if (!first && stri_at(*i) == '|') {
+			stri_inc(*i); /* '|' */
+			if (!stri_more(*i)) break;
+		}
+		first = 0;
 		struct subgraph seq = parse_sequence(g, i);
 		if (IS_ERROR_SUBGRAPH(seq)) {
 			return seq;
