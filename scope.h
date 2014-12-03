@@ -37,7 +37,7 @@ struct scope *scope_new(struct scope *outer, void (*freefn)(void *));
  * @param varname the name of the variable
  * @return the value of the variable, which is BORROWED
  */
-void *scope_get(struct scope *scope, const char * /*atom*/ varname);
+void *scope_get(const struct scope *scope, const char * /*atom*/ varname);
 
 /**
  * Stores the value in the current (innermost) scope.

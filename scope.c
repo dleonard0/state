@@ -15,7 +15,7 @@ scope_new(struct scope *outer, void (*freefn)(void *))
 }
 
 void *
-scope_get(struct scope *scope, const char * /*atom*/ varname)
+scope_get(const struct scope *scope, const char * /*atom*/ varname)
 {
 	void *value = 0;
 
