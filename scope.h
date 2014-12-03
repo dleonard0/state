@@ -2,7 +2,6 @@
 #define scope_h
 
 struct dict;
-struct macro;
 
 /*
  * Scoped variable dictionary.
@@ -25,19 +24,20 @@ struct scope {
 
 /**
  * Allocates a new variable scope.
- * @param outer the outer scope that scope_get() will search.
+ * @param outer   the outer scope that scope_get() will search.
+ * @param freefn  a function applied to put values 
+ *                during #scope_free()
  * @return a new scope that must be released with #scope_free().
  */
-struct scope *scope_new(struct scope *outer);
+struct scope *scope_new(struct scope *outer, void (*freefn)(void *));
 
 /** 
  * Looks up a variable in the scope.
  * @param scope   the variable scope
  * @param varname the name of the variable
- * @return the macro value of the variable, which is BORROWED
- *         and should be duplicated with #macro_dup() if needed.
+ * @return the value of the variable, which is BORROWED
  */
-struct macro *scope_get(struct scope *scope, const char * /*atom*/ varname);
+void *scope_get(struct scope *scope, const char * /*atom*/ varname);
 
 /**
  * Stores the value in the current (innermost) scope.
@@ -48,11 +48,11 @@ struct macro *scope_get(struct scope *scope, const char * /*atom*/ varname);
  *		  scope is freed.
  */
 void scope_put(struct scope *scope, const char * /*atom*/ varname, 
-		struct macro *value);
+		void *value);
 
 /**
  * Frees an innermost scope.
- * There must be no scopes inside this scope.
+ * There must be no scopes inside (i.e. referring to) this scope.
  * @return the outer scope, or @c NULL if none.
  */
 struct scope *scope_free(struct scope *scope);
