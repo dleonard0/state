@@ -5,13 +5,28 @@ struct macro_list;
 struct str;
 
 /**
- * A macro is a destructured string, suitable for use in
- * being expanded into another string. 
- * Essentially, a macro is pre-processed text, organised as a
- * tree of references and literals, ready for later expansion.
+ * A macro is a destructured string, suitable for expansion
+ * into another string by using variable string values from a
+ * variable scope. 
+ *
+ * A macro is stored as a single-linked list of macro parts
+ * that logicalally form a tree. Each part is either:
+ *    atom      - an interned atom (see <atom.h>)
+ *    literal   - a literal string (see <str.h>)
+ *    reference - a structured reference e.g, $(basename foo.c)
+ *                that is in turn a list of dictinct macros.
  * 
- * For example, "$(a b,c)" is a reference to the list of three
- * macros, ["a", "b", "c"].
+ * References are represented as $(a b,c,...). Notice that
+ * the first and second arguments are separated by whitespace,
+ * while the subsequent arguments are separated by a single
+ * comma character.
+ *
+ * In this system, a macro structure represents a pre-digested
+ * text stream - organised into a structured tree of atoms, 
+ * strings and references - amenable for ready expansion into
+ * a concrete string when required. (See "expand.h")
+ *
+ * Macros are constructed by the parser module.
  */
 typedef struct macro {
 	struct macro *next;		// the next part of the macro

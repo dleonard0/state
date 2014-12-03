@@ -1,6 +1,13 @@
 #ifndef parse_h
 #define parse_h
 
+/*
+ * The parser module parses a staterule file, and communicates the
+ * results to the caller in the form of parse events, through a
+ * callback interface. The same interface is used by the parser
+ * to obtain the file's text stream.
+ */
+
 #include "atom.h"
 #include "macro.h"
 #include "str.h"

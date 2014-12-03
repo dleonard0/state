@@ -6,6 +6,8 @@
 /**
  * A character class is a sorted set of character ranges. For example,
  *   {[a,d),[g,k)} === {a,b,c, g,h,i,j}
+ * It is normally written
+ *    [a-cg-j]
  * The NULL cclass is called ε (epsilon).
  * The empty cclass matches no characters.
  */
