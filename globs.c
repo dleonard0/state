@@ -185,13 +185,15 @@ parse_cclass(struct graph *g, stri *i)
 	trans = graph_new_trans(g, sg.entry, sg.exit);
 	trans->cclass = cc;
 
-	if (stri_more(*i) && stri_at(*i) == '!') {
+	if (stri_more(*i) && 
+	    (stri_at(*i) == '!' || stri_at(*i) == '^'))
+	{
 		invert = 1;
 		stri_inc(*i);
 	}
 	if (stri_more(*i) && stri_at(*i) == ']') {
+		cclass_add(cc, ']', ']' + 1);
 		stri_inc(*i);
-		cclass_add(cc, ']', ']'+1);
 	}
 	for (;;) {
 		unsigned lo, hi;
