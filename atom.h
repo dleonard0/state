@@ -35,4 +35,12 @@ atom atom_from_str(struct str *str);
  */
 struct str *atom_to_str(atom a);
 
+/**
+ * Appends an atom to a string.
+ * @param ret   the extend point (see #str_xcat())
+ * @param a     the atom to append
+ * @return the new extend point
+ */
+struct str **atom_xstr(struct str **ret, atom a);
+
 #endif /* atom_h */

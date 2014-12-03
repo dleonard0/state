@@ -32,5 +32,16 @@ main(void)
 		assert(!atom_to_str(0));
 		assert(!atom_to_str(atom_s("")));
 	}
+	{
+		atom A = atom_s("A");
+		atom B = atom_s("B");
+		str *s;
+		str **x = &s;
+		x = atom_xstr(x, A);
+		x = atom_xstr(x, B);
+		*x = 0;
+		assert(str_eq(s, "AB"));
+		str_free(s);
+	}
 	return 0;
 }

@@ -108,15 +108,15 @@ atom_s(const char *s)
 	return seg->data;
 }
 
-str *
-atom_to_str(atom a)
+struct str **
+atom_xstr(struct str **ret, atom a)
 {
 	struct dict *dict;
 	struct str_seg *seg;
 	struct str dummy;
 
 	if (!a || !*a) {
-		return 0;
+		return ret;
 	}
 	
 	dict = atom_dict();
@@ -125,5 +125,14 @@ atom_to_str(atom a)
 	dummy.offset = 0;
 	dummy.len = strlen(a);
 	dummy.next = 0;
-	return str_dup(&dummy);
+	return str_xcat(ret, &dummy);
+}
+
+str *
+atom_to_str(atom a)
+{
+	str *ret;
+
+	*atom_xstr(&ret, a) = NULL;
+	return ret;
 }
