@@ -1,21 +1,48 @@
 #ifndef globs_h
 #define globs_h
 
-struct str;
-
 /*
- * A set of glob expressions and their reference values.
- * Internally this is a state machine (automaton) capable of matching
- * strings against any or all of the glob patterns within to it.
- * The states within the glob set are identified by unsigned integers.
+ * A 'globs' is a glob set: a set of string matching expressions each
+ * with their own reference values.  It functions as a state machine
+ * (automaton) capable of matching strings against any or all of the member
+ * glob patterns within it.  The automaton states within the globs are
+ * identified by an unsigned integer, and the interfaces below encourage
+ * callers to provide their own state storage, treating a globs, once
+ * prepared, as an immutable object.
  */
+
 struct globs;
 
-/** Creates a new, empty set of globs.  */
+/*
+ * Glob Pattern Syntax
+ *
+ * Glob expressions are best known by their use in the standard
+ * Unix shell.
+ * This one implements a subset of POSIX extended globs. A glob 
+ * expression is a sequence of zero or more of the following:
+ *
+ *      Sub-Pattern...          Matches...
+ *      \x                      - the literal character x
+ *      ?                       - any character except /
+ *      *                       - zero or more ?s
+ *      [xy-z]                  - any char in the range set
+ *      [!xy-z]                 - any char not in the range set
+ *      [^xy-z]                 - any char not in the range set
+ *      @(pattern|...)          - exactly 1 of the patterns
+ *      ?(pattern|...)          - 0 or 1 of the patterns
+ *      *(pattern|...)          - 0 or more "
+ *      +(pattern|...)          - 1 or more "
+ *      !(pattern|...)          - (NOT SUPPORTED!)
+ *      otherwise               - a literal character
+ */
+
+/** Creates a new, empty glob set.  */
 struct globs *globs_new(void);
 
-/** Deallocate a set of globs */
+/** Deallocate a glob set */
 void globs_free(struct globs *globs);
+
+struct str; /* forward decl */
 
 /**
  * Adds a glob expression to the glob set, along with
@@ -23,7 +50,7 @@ void globs_free(struct globs *globs);
  *
  * @param globs       The set of patterns to add to
  * @param globstr     A string containing an extended
- *                    glob expression.
+ *                    glob expression. (See above)
  * @param ref         The pointer that will be returned
  *                    by #globs_is_accept()
  * @return @c NULL on success, 

@@ -9,20 +9,7 @@ struct globs {
 };
 
 /*------------------------------------------------------------
- * globs parser
- *
- *	\x			- match literal character x
- *	?                       - if not followed by ( then same as ?([!/])
- *	*                       - if not followed by ( then same as *(?)
- *	[xyz]                   - character class; similar to @(x|y|z)
- *	[!xyz]                  - inverted character class
- *	?(pattern|...)          - match 0 or 1
- *	*(pattern|...)          - match 0 or more
- *	+(pattern|...)          - match 1 or more
- *	@(pattern|...)          - match 1 of the patterns
- *	!(pattern|...)          - NOT SUPPORTED - error
- *	otherwise               - match the character exactly
- *
+ * glob parser
  */
 
 /*
