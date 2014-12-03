@@ -215,6 +215,28 @@ main(void)
 		assert(!stri_more(i));
 		str_free(bad);
 	}
+	{
+		STR word = str_new("word");
+		STR hello = str_new("hello");
+		str **x;
+
+		str *wordhello;
+		x = &wordhello;
+		x = str_xcat(x, word);
+		x = str_xcat(x, hello);
+		*x = NULL;
+		assert(str_eq(wordhello, "wordhello"));
+
+		str *s;
+		x = &s;
+		x = str_xcat(x, wordhello);
+		x = str_xcat(x, wordhello);
+		*x = NULL;
+		assert(str_eq(s, "wordhellowordhello"));
+
+		str_free(wordhello);
+		str_free(s);
+	}
 
 	assert(str_count == 0);
 

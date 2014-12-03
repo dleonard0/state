@@ -74,27 +74,32 @@ str_new_(const char *cstr, const char *file, unsigned lineno)
 	return str_newn_(cstr, strlen(cstr), file, lineno);
 }
 
+str **
+str_xcat(str **dst, const str *s)
+{
+	str **ret = dst;
+	for (; s; s = s->next) {
+		str *str = str_alloc();
+
+		str->offset = s->offset;
+		str->len = s->len;
+		str->seg = s->seg;
+		str->seg->refs++;
+
+		*ret = str;
+		ret = &str->next;
+	}
+	return ret;
+}
+
 str *
 str_cat(const str *a, const str *b)
 {
-	str *str;
+	str *str, **x = &str;
 
-	if (!a) {
-		if (!b) {
-			return NULL;
-		}
-		a = b;
-		b = NULL;
-	}
-
-	str = str_alloc();
-	str->next = str_cat(a->next, b);
-
-	str->offset = a->offset;
-	str->len = a->len;
-	str->seg = a->seg;
-	str->seg->refs++;
-
+	x = str_xcat(x, a);
+	x = str_xcat(x, b);
+	*x = NULL;
 	return str;
 }
 
@@ -156,7 +161,10 @@ str_eq(const str *a, const char *s)
 str *
 str_dup(const str *a)
 {
-	return str_cat(a, NULL);
+	str *ret, **x = &ret;
+	x = str_xcat(x, a);
+	*x = NULL;
+	return ret;
 }
 
 void

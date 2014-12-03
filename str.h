@@ -93,6 +93,22 @@ int       str_eq(const str *s, const char *cs);
 str *     str_dup(const str *s);
 
 /**
+ * Duplicates a string, attaching it to the end
+ * of another, returning the end reference.
+ *
+ * The caller should not initialize the content of
+ * @c{*str_ret}; but the returned pointer will
+ * be to uninitialized memory.
+ *
+ * @param str_ret pointer to where to attach the string
+ * @param s       the string to duplicate
+ * @return pointer to the (unintialized) next pointer
+ *         of the last element of the copied string,
+ *         or @a str_ret if @a s was empty.
+ */
+str **    str_xcat(str **str_ret, const str *s);
+
+/**
  * Extract a copy of a section of an existing STR.
  * @param s      a STR
  * @param offset offset into @a str; may exceed the length of @a s
