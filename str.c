@@ -75,6 +75,35 @@ str_new_(const char *cstr, const char *file, unsigned lineno)
 }
 
 str **
+str_xcatr(str **dst, const stri begin, const stri end)
+{
+	str **ret = dst;
+	stri i = begin;
+
+	while (stri_more(i) && !(i.str == end.str && i.pos == end.pos)) {
+		str *str = str_alloc();
+
+		str->offset = i.str->offset + i.pos;
+		if (i.str == end.str)
+			str->len = end.pos - i.pos;
+		else
+			str->len = i.str->len - i.pos;
+
+		str->seg = i.str->seg;
+		str->seg->refs++;
+
+		*ret = str;
+		ret = &str->next;
+
+		if (i.str == end.str)
+			break;
+		i.str = i.str->next;
+		i.pos = 0;
+	}
+	return ret;
+}
+
+str **
 str_xcat(str **dst, const str *s)
 {
 	str **ret = dst;

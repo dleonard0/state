@@ -109,6 +109,17 @@ str *     str_dup(const str *s);
 str **    str_xcat(str **str_ret, const str *s);
 
 /**
+ * Appends the string segment from @a begin to @a end
+ * onto the end of a destination string.
+ *
+ * @param dst    pointer where to attach string
+ * @param begin  beginning of substring to attach
+ * @param end    end of substring, or {0,0} to mean all
+ * @returns same as #str_xcat()
+ */
+str **    str_xcatr(str **dst, const stri begin, const stri end);
+
+/**
  * Extract a copy of a section of an existing STR.
  * @param s      a STR
  * @param offset offset into @a str; may exceed the length of @a s

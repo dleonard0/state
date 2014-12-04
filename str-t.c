@@ -237,6 +237,44 @@ main(void)
 		str_free(wordhello);
 		str_free(s);
 	}
+	{
+		STR hello = str_new("hello");
+		stri i1 = stri_str(hello);
+		stri_inc_by(&i1, 2);	/* i1 = "llo" */
+		stri i2 = i1;
+		stri_inc_by(&i2, 2);	/* l2 = "o" */
+
+		str *s;
+		str **x;
+
+		x = &s;
+		x = str_xcatr(x, i1, i2);
+		*x = 0;
+		assert(str_eq(s, "ll"));
+
+		x = str_xcatr(x, i1, i2);
+		*x = 0;
+		assert(str_eq(s, "llll"));
+
+		x = str_xcatr(x, i2, stri_str(0));
+		*x = 0;
+		assert(str_eq(s, "llllo"));
+
+		str *t;
+		x = &t;
+		i1 = stri_str(s);
+		stri_inc_by(&i1, 1);
+		i2 = i1;
+		stri_inc_by(&i2, 3);
+
+		x = str_xcatr(x, i1, i2);
+		*x = 0;
+		assert(str_eq(t, "lll"));
+
+		str_free(t);
+		str_free(s);
+	}
+
 
 	assert(str_count == 0);
 
