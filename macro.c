@@ -54,12 +54,12 @@ macro_new_atom(const char *atom)
 }
 
 struct macro *
-macro_new_literal(struct str *str)
+macro_new_str(struct str *str)
 {
 	struct macro *m = macro_alloc();
 	m->next = 0;
-	m->type = MACRO_LITERAL;
-	m->literal = str;
+	m->type = MACRO_STR;
+	m->str = str;
 	return m;
 }
 
@@ -91,8 +91,8 @@ macro_free(struct macro *next)
 		switch (m->type) {
 		case MACRO_ATOM:
 			break;
-		case MACRO_LITERAL:
-			str_free(m->literal);
+		case MACRO_STR:
+			str_free(m->str);
 			break;
 		case MACRO_REFERENCE:
 			macro_list_free(m->reference);
@@ -130,10 +130,10 @@ macro_ltrim(macro **mp)
         macro *m;
 	
 	while ((m = *mp)) {
-            if (m->type != MACRO_LITERAL)
+            if (m->type != MACRO_STR)
 	        break;
-	    str_ltrim(&m->literal);
-	    if (m->literal)
+	    str_ltrim(&m->str);
+	    if (m->str)
 	    	break;
 	    *mp = m->next;
             m->next = 0;
@@ -151,17 +151,17 @@ macro_rtrim(macro **mp)
         macro_rtrim(&m->next);
 	if (m->next)
 		return;
-        if (m->type != MACRO_LITERAL)
+        if (m->type != MACRO_STR)
 		return;
-        str_rtrim(&m->literal);
-	if (m->literal)
+        str_rtrim(&m->str);
+	if (m->str)
 		return;
         macro_free(m);
         *mp = 0;
 }
 
 /*
- * roughly splits a macro at the first literal whitespace;
+ * roughly splits a macro at the first non-atomic whitespace;
  * returns the right side, which will start with the found whitespace
  */
 static macro *
@@ -171,17 +171,17 @@ macro_rough_split(macro **mp)
 	macro *m, *m2;
 	str **sp, *s, *s2;
 
-	/* Hunt for a literal macro section */
+	/* Hunt for a non-atomic string macro section */
 	while (*mp) {
-	    if ((*mp)->type == MACRO_LITERAL) {
+	    if ((*mp)->type == MACRO_STR) {
 		/* Hunt for a whitespace character */
-		sp = &(*mp)->literal;
+		sp = &(*mp)->str;
 		while (*sp) {
 		    s = *sp;
 		    for (pos = 0; pos < s->len; pos++) {
 			if (isspace(s->seg->data[s->offset + pos])) {
 			    if (pos == 0) {
-			        /* Found space at beginning of literal string,
+			        /* Found space at beginning of string,
 				 * which makes it easy to split the macro */
 				m2 = *mp;
 				*mp = 0;
@@ -193,7 +193,7 @@ macro_rough_split(macro **mp)
 				 */
 				s2 = str_split_at(sp, pos);
 				m = *mp;
-				m2 = macro_new_literal(s2);
+				m2 = macro_new_str(s2);
 				m2->next = m->next;
 				m->next = 0;
 			    }

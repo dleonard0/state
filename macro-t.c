@@ -25,8 +25,8 @@ macro_to_s(const macro *m, char *buf)
 			while (*a)
 				*buf++ = *a++;
 			break;
-		case MACRO_LITERAL:
-			for (i = stri_str(m->literal); 
+		case MACRO_STR:
+			for (i = stri_str(m->str); 
 				stri_more(i); stri_inc(i))
 			{
 				char ch = stri_at(i);
@@ -78,7 +78,7 @@ main(void)
 	STR C = str_new("C");
 
 	{
-		/* macro_cons, macro_new_literal */
+		/* macro_cons, macro_new_str */
 		macro *m = 0;
 		macro **acc;
 
@@ -90,9 +90,9 @@ main(void)
 		macro_free(m); m = 0;
 
 		acc = &m;
-		acc = macro_cons(acc, macro_new_literal(str_dup(A)));
-		acc = macro_cons(acc, macro_new_literal(str_dup(B)));
-		acc = macro_cons(acc, macro_new_literal(str_dup(C)));
+		acc = macro_cons(acc, macro_new_str(str_dup(A)));
+		acc = macro_cons(acc, macro_new_str(str_dup(B)));
+		acc = macro_cons(acc, macro_new_str(str_dup(C)));
 		assert(macro_eq(m, "ABC"));
 		macro_free(m); m = 0;
 	}
@@ -108,9 +108,9 @@ main(void)
 		assert(!m);
 
 		acc = &m;
-		acc = macro_cons(acc, macro_new_literal(str_new(" ")));
-		acc = macro_cons(acc, macro_new_literal(str_new("  x  ")));
-		acc = macro_cons(acc, macro_new_literal(str_new("    ")));
+		acc = macro_cons(acc, macro_new_str(str_new(" ")));
+		acc = macro_cons(acc, macro_new_str(str_new("  x  ")));
+		acc = macro_cons(acc, macro_new_str(str_new("    ")));
 		assert(macro_eq(m, "   x      "));
 		macro_rtrim(&m);
 		assert(macro_eq(m, "   x"));
@@ -122,7 +122,7 @@ main(void)
 	{
 		/* macro_split */
 		struct macro_list *l = macro_split(
-			 macro_new_literal(str_new("  this  is a test  ")));
+			 macro_new_str(str_new("  this  is a test  ")));
 
 		assert(l);
 		assert(macro_eq(l->macro, "this"));
@@ -133,7 +133,7 @@ main(void)
 		macro_list_free(l);
 
 		assert(!macro_split(0));
-		assert(!macro_split(macro_new_literal(str_new(" "))));
+		assert(!macro_split(macro_new_str(str_new(" "))));
 	}
 
 	return 0;

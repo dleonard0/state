@@ -263,12 +263,12 @@ maybe_make_reference_atom(macro *ref)
 	if (ref->type == MACRO_REFERENCE &&
 	    ref->reference &&
 	    ref->reference->macro &&
-	    ref->reference->macro->type == MACRO_LITERAL &&
-	    ref->reference->macro->literal &&
-	    !ref->reference->macro->literal->next)
+	    ref->reference->macro->type == MACRO_STR &&
+	    ref->reference->macro->str &&
+	    !ref->reference->macro->str->next)
 	{
-	    atom a = atom_from_str(ref->reference->macro->literal);
-	    str_free(ref->reference->macro->literal);
+	    atom a = atom_from_str(ref->reference->macro->str);
+	    str_free(ref->reference->macro->str);
 	    ref->reference->macro->type = MACRO_ATOM;
 	    ref->reference->macro->atom = a;
 	}
@@ -290,11 +290,11 @@ macro_erase_last_assign_prefix(macro *m)
 	while (m->next) {
 		m = m->next;
 	}
-	if (m->type != MACRO_LITERAL) {
+	if (m->type != MACRO_STR) {
 		return ch;
 	}
 
-	str *s = m->literal;
+	str *s = m->str;
 	if (!s) {
 		return ch;
 	}
@@ -442,7 +442,7 @@ again:
 	if (is_close(peek(p), close))
 	    return 1;
 
-	/* literal macro */
+	/* literal str macro */
 
 	b = buf;
 	while (b < buf + sizeof buf - 2) {
@@ -465,7 +465,7 @@ again:
 	    *b++ = next(p);
 	}
 	if (b != buf) {
-	    mp = macro_cons(mp, macro_new_literal(str_newn(buf, b - buf)));
+	    mp = macro_cons(mp, macro_new_str(str_newn(buf, b - buf)));
 	    goto again;
 	}
 

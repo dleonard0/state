@@ -5,39 +5,35 @@ struct macro_list;
 struct str;
 
 /**
- * A macro is a destructured string, suitable for expansion
- * into another string by using variable string values from a
- * variable scope. 
+ * A macro is a non-recursive tree-structured object, suitable
+ * for expansion into a string by using the macro-valued variables
+ * held in a variable scope/dictionary.
  *
  * A macro is stored as a single-linked list of macro parts
- * that logicalally form a tree. Each part is either:
- *    atom      - an interned atom (see <atom.h>)
- *    literal   - a literal string (see <str.h>)
- *    reference - a structured reference e.g, $(basename foo.c)
- *                that is in turn a list of dictinct macros.
+ * that logically form a tree. Each macro part is either:
+ *    atom      - an interned string (see <atom.h>)
+ *    str       - a shared, literal string (see <str.h>)
+ *    reference - a structured reference denoted $(a b,c,...)
+ *                but held in memory as the linked-list {a,b,c,...}
  * 
  * References are represented as $(a b,c,...). Notice that
  * the first and second arguments are separated by whitespace,
  * while the subsequent arguments are separated by a single
- * comma character.
+ * comma character. This is for compatibility with GNU make.
  *
- * In this system, a macro structure represents a pre-digested
- * text stream - organised into a structured tree of atoms, 
- * strings and references - amenable for ready expansion into
- * a concrete string when required. (See "expand.h")
- *
- * Macros are constructed by the parser module.
+ * Macros are constructed by the parser module, see #parse().
+ * They can be "expanded" into a concrete string, see #expand_macro().
  */
 typedef struct macro {
 	struct macro *next;		// the next part of the macro
 	enum {
 		MACRO_ATOM,
-		MACRO_LITERAL,
+		MACRO_STR,
 		MACRO_REFERENCE
 	} type;
 	union {
 		const char *atom;
-		struct str *literal;	// backlashes removed; never NULL
+		struct str *str;	// backlashes removed; never NULL
 		struct macro_list *reference; // $(macro macro,macro,...)
 	};
 } macro;
@@ -56,11 +52,11 @@ struct macro_list {
 macro *macro_new_atom(const char *atom);
 
 /**
- * Constructs a new macro containing a literal string.
+ * Constructs a new macro containing a non-atomic, literal string.
  * @param str  the string; ownership of the string is TAKEN by the macro
  * @return a macro that must eventually be released with #macro_free()
  */
-macro *macro_new_literal(struct str *str);
+macro *macro_new_str(struct str *str);
 
 /**
  * Constructs a new reference macro, with no elements; i.e. $()
@@ -99,7 +95,7 @@ struct macro_list **macro_list_cons(struct macro_list **lp, macro *m);
 /**
  * Splits a macro on whitespace.
  * Backslashes before whitespace characters prevent splitting.
- * Only top-level literal whitespace is considered (ie refs and
+ * Only top-level literal string whitespace is considered (ie refs and
  * atoms are ignored).
  * Sequences of whitespace are considered as a single space and removed
  * during the split. Leading and trailing whitespace is removed.
@@ -110,7 +106,7 @@ struct macro_list **macro_list_cons(struct macro_list **lp, macro *m);
 struct macro_list *macro_split(struct macro *m);
 
 /**
- * Trims literal whitespace off the end of a macro.
+ * Trims whitespace off the end of a macro.
  * If the macro is all whitespace, the macro is released and @c NULL
  * is stored.
  * @param mp  a pointer to the macro to trim.
@@ -118,7 +114,7 @@ struct macro_list *macro_split(struct macro *m);
 void macro_rtrim(struct macro **mp);
 
 /**
- * Trims literal whitespace off the beginning of a macro.
+ * Trims whitespace off the beginning of a macro.
  * If the macro is all whitespace, the macro is released and @c NULL
  * is stored.
  * @param mp  a pointer to the macro to trim.

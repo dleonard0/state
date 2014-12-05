@@ -71,9 +71,9 @@ mm_define(struct parser *p, macro *lhs, int defkind, macro *text)
 
 	// only support defines of the form NAME=... for testing
 	assert(defkind == DEFKIND_DELAYED);
-	assert(lhs && lhs->type == MACRO_LITERAL && !lhs->next);
+	assert(lhs && lhs->type == MACRO_STR && !lhs->next);
 
-	scope_put(mm->scope, atom_from_str(lhs->literal), text);
+	scope_put(mm->scope, atom_from_str(lhs->str), text);
 }
 
 static void
@@ -167,8 +167,8 @@ print_macro(FILE *f, macro *m)
 			print_atom(f, m->atom);
 			fprintf(f, "\033[m");
 			break;
-		case MACRO_LITERAL:
-			print_str(f, m->literal);
+		case MACRO_STR:
+			print_str(f, m->str);
 			break;
 		case MACRO_REFERENCE:
 			fprintf(f, "\033[34m$(\033[m");

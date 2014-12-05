@@ -20,12 +20,12 @@ class MacroPrinter(object):
 	            result = result + atom.string()
 		else:
 	            result = result + "[NULL atom]"
-	    elif t == 'MACRO_LITERAL':
-		literal = mp['literal']
+	    elif t == 'MACRO_STR':
+		literal = mp['str']
 		if literal:
 	            result = result + MacroPrinter.str_to_string(literal)
 		else:
-	            result = result + "[NULL literal]"
+	            result = result + "[NULL str]"
 	    elif t == 'MACRO_REFERENCE':
 		l = mp['reference']
 		if l:

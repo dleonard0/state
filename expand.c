@@ -103,8 +103,8 @@ expand_macro(str **x, const macro *macro, const struct scope *scope)
 		case MACRO_ATOM:
 			x = atom_xstr(x, macro->atom);
 			break;
-		case MACRO_LITERAL:
-			x = str_xcat(x, macro->literal);
+		case MACRO_STR:
+			x = str_xcat(x, macro->str);
 			break;
 		case MACRO_REFERENCE:
 			{

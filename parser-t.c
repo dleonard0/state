@@ -56,8 +56,8 @@ cb_putm(struct cb_context *context, const macro *m)
 		case MACRO_ATOM:
 			cb_puts(context, m->atom);
 			break;
-		case MACRO_LITERAL:
-			cb_putstr(context, m->literal);
+		case MACRO_STR:
+			cb_putstr(context, m->str);
 			break;
 		case MACRO_REFERENCE:
 			cb_puts(context, "$(");
