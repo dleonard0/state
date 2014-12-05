@@ -144,24 +144,26 @@ print_macro(FILE *f, macro *m)
 	for (; m; m = m->next) {
 		switch (m->type) {
 		case MACRO_ATOM:
+			fprintf(f, "\033[33m");
 			print_atom(f, m->atom);
+			fprintf(f, "\033[m");
 			break;
 		case MACRO_LITERAL:
 			print_str(f, m->literal);
 			break;
 		case MACRO_REFERENCE:
-			fprintf(f, "$(");
+			fprintf(f, "\033[34m$(\033[m");
 			ml = m->reference;
 			if (ml) {
 				print_macro(f, ml->macro);
 				char sep = ' ';
 				for (ml = ml->next; ml; ml = ml->next) {
-					putc(sep, f);
+					fprintf(f, "\033[34m%c\033[m", sep);
 					sep = ',';
 					print_macro(f, ml->macro);
 				}
 			}
-			putc(')', f);
+			fprintf(f, "\033[34m)\033[m");
 			break;
 		default:
 			fprintf(f, "*ERROR*");
@@ -182,7 +184,7 @@ assert_expands_(const char *file, int lineno,
 		.directive = mm_directive,
 		.error = mm_error,
 	};
-	const char * const texts[] = { ".macro ", text, "\n", defines, 0 };
+	const char * const texts[] = { ".macro ", text, "\n", defines, "\n", 0 };
 	struct mm mm = {
 		.file = file,
 		.lineno = lineno,
@@ -199,7 +201,8 @@ assert_expands_(const char *file, int lineno,
 	*x = 0;
 
 	if (!str_eq(actual, expected)) {
-		fprintf(stderr, "%s:%d: expected expansion\n  expected '",
+		fprintf(stderr, "%s:%d: unexpected macro expansion\n"
+		                "  expected '",
 			mm.file, mm.lineno);
 		print_atom(stderr, expected); // not really an atom, but ok
 		fprintf(stderr, "'\n  actual   '");
@@ -211,14 +214,15 @@ assert_expands_(const char *file, int lineno,
 		struct dict_iter *di = dict_iter_new(mm.scope->dict);
 		const void *key;
 		void *value;
+		fprintf(stderr, "  scope content:\n");
 		while (dict_iter_next(di, &key, &value)) {
-			fprintf(stderr, "  %s = '", (const char *)key);
+			fprintf(stderr, "    %-4s = '", (const char *)key);
 			print_macro(stderr, (macro *)value);
 			fprintf(stderr, "'\n");
 		}
 		dict_iter_free(di);
 		fflush(stderr);
-		abort();
+		exit(1);
 	}
 
 	str_free(actual);
@@ -233,5 +237,9 @@ main()
 	assert_expands("abc", "abc");
 	assert_expands("ab$(X)c", "abc");
 	assert_expands("ab$()c", "abc");
+	assert_expands("a$(X)c", "abc", "X = b");
+
+	assert_expands("a$(subst fofobar,M,$(X))c", 	"afofofoMc", 
+		       "X = fofofofofobar");
 	return 0;
 }
