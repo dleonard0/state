@@ -13,7 +13,7 @@
  * If FROM is empty string, then simply append TO to the end of TEXT
  */
 static str **
-func_substr(str **x, unsigned argc, const str **args, const struct scope *scope)
+func_subst(str **x, unsigned argc, const str **args, const struct scope *scope)
 {
 	const str *FROM = args[1];
 	const str *TO = args[2];
@@ -23,26 +23,38 @@ func_substr(str **x, unsigned argc, const str **args, const struct scope *scope)
 		return str_xcat(str_xcat(x, TEXT), TO);
 	}
 
+	/*
+	 * maintain a 'hold' range which is the range of
+	 * text that we have tentatively matched against the
+	 * FROM text.
+	 * Because we don't want to return single-character
+	 * strings at a time, we also maintain an 'out' range;
+	 */
 	stri text = stri_str(TEXT);
-	stri start = text;
+	stri out_start, out_end;
+	out_start = out_end = text;
 	while (stri_more(text)) {
-		stri m = stri_str(FROM);
+		stri f = stri_str(FROM);
 		stri t = text;
-	        while (stri_more(t) && stri_at(t) == stri_at(m)) {
+		/* Try to match from at position t */
+	        while (stri_more(t) && stri_at(t) == stri_at(f)) {
 			stri_inc(t);
-			stri_inc(m);
-			if (!stri_more(m)) {
-				x = str_xcatr(x, start, t);
+			stri_inc(f);
+			if (!stri_more(f)) {
+				/* full match! */
+				x = str_xcatr(x, out_start, out_end);
 				x = str_xcat(x, TO);
-				start = text = t;
+				text = f;	/* skip text up */
+				out_start = out_end = text;
 				break;
 			}
 		}
-		if (stri_more(m)) {
+		if (stri_more(f)) { /* (no match) */
 			stri_inc(text);
+			out_end = text;
 		}
 	}
-	return str_xcatr(x, start, text);
+	return str_xcatr(x, out_start, out_end);
 }
 
 typedef str **(*func_t)(str **x, unsigned argc, const str **args, 
@@ -60,7 +72,7 @@ find_func(atom name)
 		    dict_put(dict, atom_s(name), _f); 			\
 		} while (0)
 
-		add_func("substr", func_substr);
+		add_func("subst", func_subst);
 		Func_dict = dict;
 	}
 	return dict_get(Func_dict, name);
