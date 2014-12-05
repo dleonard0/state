@@ -9,6 +9,25 @@
 #include "parser.h"
 #include "expand.h"
 
+/*------------------------------------------------------------
+ * test framework for expanding macros
+ *
+ * This is a cut-down parser callback provider.
+ * We construct a parser input of the form:
+ *
+ *     VAR1 = <value>
+ *     VAR2 = <value>
+ *     .macro <macro-under-text>
+ *
+ * When the parse completes, we have received the macro
+ * through the (fake) .macro directive, and collected variables
+ * in scope definitions along the way. Then the macro is expanded
+ * and compared against the expected C string.
+ *
+ * Some effort has been expended to display the parse input,
+ * and the macro structure so that bugs are easier to fix.
+ */
+
 struct mm {
 	const char *file;
 	int lineno;
@@ -230,15 +249,22 @@ assert_expands_(const char *file, int lineno,
 	scope_free(mm.scope);
 }
 
+
+
 int
 main()
 {
+	/* basic expasion tests */
 	assert_expands("", "");
 	assert_expands("abc", "abc");
-	assert_expands("ab$(X)c", "abc");
+	assert_expands("ab$(X)c", "abc");		/* undefined $(X) */
 	assert_expands("ab$()c", "abc");
+	assert_expands("ab$( )c", "abc");
 	assert_expands("a$(X)c", "abc", "X = b");
+	assert_expands("a$(X)c", "abc", "X = $(Y)\nY = b");
+	assert_expands("a$($(X))c", "abc", "X = Y\nY = b");
 
+	/* subst */
 	assert_expands("a$(subst fofobar,M,$(X))c", 	"afofofoMc", 
 		       "X = fofofofofobar");
 	return 0;
