@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include "match.h"
-#include "graph.h"
+#include "nfa.h"
 
 struct globset {
 	struct graph g;

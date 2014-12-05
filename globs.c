@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "globs.h"
 #include "str.h"
-#include "graph.h"
+#include "nfa.h"
 #include "cclass.h"
 
 struct globs {

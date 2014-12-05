@@ -6,7 +6,7 @@
 
 #include "globs.h"
 #include "str.h"
-#include "graph-dbg.h"
+#include "nfa-dbg.h"
 
 static void assert_match_(const char *file, int lineno, int expect_accept, const char *globexp, ...)
 	__attribute__((sentinel));

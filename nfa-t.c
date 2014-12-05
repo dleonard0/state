@@ -3,8 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "graph.h"
-#include "graph-dbg.h"
+#include "nfa.h"
+#include "nfa-dbg.h"
 
 /* Debug is set to 1 if environment variable $DEBUG is defined */
 static int Debug = 0;

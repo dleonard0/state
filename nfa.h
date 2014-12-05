@@ -1,5 +1,5 @@
-#ifndef graph_h
-#define graph_h
+#ifndef nfa_h
+#define nfa_h
 
 #include <stdlib.h>
 #include "cclass.h"
@@ -84,4 +84,4 @@ struct transition *graph_new_trans(struct graph *g, unsigned from, unsigned to);
  */
 void graph_to_dfa(struct graph *g);
 
-#endif /* graph_h */
+#endif /* nfa_h */

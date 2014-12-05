@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "graph.h"
+#include "nfa.h"
 #include "bitset.h"
 
 #define TRANSINC 16

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "graph-dbg.h"
+#include "nfa-dbg.h"
 
 #define EPSILON_STR "\xce\xb5"	/* epsilon character in UTF-8 */
 
