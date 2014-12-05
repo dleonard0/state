@@ -20,7 +20,7 @@ static void
 globs_dump(const struct globs *g, const char *gexp, int state)
 {
 	printf("glob '%s' compiled to:\n", gexp);
-	graph_dump(stdout, (const struct graph *)g, state);
+	nfa_dump(stdout, (const struct nfa *)g, state);
 	fflush(stdout);
 }
 

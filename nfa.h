@@ -17,7 +17,7 @@
  * has at most one member. Or, at least, its first member
  * is the most important.
  */
-struct graph {
+struct nfa {
 	unsigned nnodes;
 	struct node {
 		unsigned nfinals;
@@ -31,21 +31,21 @@ struct graph {
 };
 
 
-/** Initializes existing graph storage. Release with #graph_fini() */
-struct graph *	graph_init(struct graph *g);
+/** Initializes existing graph storage. Release with #nfa_fini() */
+struct nfa *	nfa_init(struct nfa *g);
 
 /** Releases content of an initialized graph structure */
-void		graph_fini(struct graph *g);
+void		nfa_fini(struct nfa *g);
 
-/** Allocates a new graph structure. Release with #graph_free(). */
-struct graph *	graph_new(void);
+/** Allocates a new graph structure. Release with #nfa_free(). */
+struct nfa *	nfa_new(void);
 
 /** Releases all store associated with the graph structure */
-void 		graph_free(struct graph *g);
+void 		nfa_free(struct nfa *g);
 
 /** Adds a new, empty node to the graph. 
  * @returns the new node's index into @c{g->nodes[]}. */
-unsigned 	graph_new_node(struct graph *g);
+unsigned 	nfa_new_node(struct nfa *g);
 
 /**
  * Appends a pointer value to a node's #node.finals array.
@@ -57,7 +57,7 @@ unsigned 	graph_new_node(struct graph *g);
  * @param n     the node's index
  * @param final the final value to add to the node.
  */
-void		graph_add_final(struct graph *g, unsigned n, const void *final);
+void		nfa_add_final(struct nfa *g, unsigned n, const void *final);
 
 /**
  * Adds an epsilon transition to the graph.
@@ -75,13 +75,13 @@ void		graph_add_final(struct graph *g, unsigned n, const void *final);
  * (It's only valid until the call to this function, because
  * realloc may adjust pointers.)
  */
-struct transition *graph_new_trans(struct graph *g, unsigned from, unsigned to);
+struct transition *nfa_new_trans(struct nfa *g, unsigned from, unsigned to);
 
 /**
  * Converts a non-deterministic graph into a deterministic one.
  * @param dfa   where to store the deterministc graph
  * @param input the (non-deterministic) input graph
  */
-void graph_to_dfa(struct graph *g);
+void nfa_to_dfa(struct nfa *g);
 
 #endif /* nfa_h */

@@ -12,10 +12,10 @@ static int Debug = 0;
 /* Only print when debugging */
 #define dprintf(...) do { if (Debug) printf(__VA_ARGS__); } while (0)
 
-/* A subgraph structure used during construction
- * of test regular expressions. The subgraph represents
+/* A subnfa structure used during construction
+ * of test regular expressions. The subnfa represents
  * a regular expression that is part of a larger regex. */
-struct subgraph {
+struct subnfa {
 	unsigned entry;
 	unsigned exit;
 };
@@ -37,13 +37,13 @@ struct subgraph {
  *   |   '(' E ')'
  */
 
-static struct subgraph parse_exp(struct graph *g, const char **sp);
+static struct subnfa parse_exp(struct nfa *g, const char **sp);
 
 /* A ::= [c-c] | . | c | (E) */
-static struct subgraph
-parse_atom(struct graph *g, const char **sp)
+static struct subnfa
+parse_atom(struct nfa *g, const char **sp)
 {
-	struct subgraph ret;
+	struct subnfa ret;
 	cclass *cc = NULL;
 	char ch;
 	struct transition *t;
@@ -83,102 +83,102 @@ parse_atom(struct graph *g, const char **sp)
 	} else {
 		cclass_add(cc, ch, ch + 1);
 	}
-	ret.entry = graph_new_node(g);
-	ret.exit = graph_new_node(g);
-	t = graph_new_trans(g, ret.entry, ret.exit);
+	ret.entry = nfa_new_node(g);
+	ret.exit = nfa_new_node(g);
+	t = nfa_new_trans(g, ret.entry, ret.exit);
 	t->cclass = cc;
 	return ret;
 }
 
 /* T ::= A? | A* | A */
-static struct subgraph
-parse_term(struct graph *g, const char **sp)
+static struct subnfa
+parse_term(struct nfa *g, const char **sp)
 {
 	char ch;
-	struct subgraph ret = parse_atom(g, sp);
+	struct subnfa ret = parse_atom(g, sp);
 
 	while ((ch = **sp) == '*' || ch == '?') {
-		struct subgraph sub = ret;
-		ret.entry = graph_new_node(g);
-		ret.exit = graph_new_node(g);
-		graph_new_trans(g, ret.entry, sub.entry);
-		graph_new_trans(g, sub.exit, ret.exit);
-		graph_new_trans(g, sub.entry, sub.exit);
+		struct subnfa sub = ret;
+		ret.entry = nfa_new_node(g);
+		ret.exit = nfa_new_node(g);
+		nfa_new_trans(g, ret.entry, sub.entry);
+		nfa_new_trans(g, sub.exit, ret.exit);
+		nfa_new_trans(g, sub.entry, sub.exit);
 		if (ch == '*')
-			graph_new_trans(g, sub.exit, sub.entry);
+			nfa_new_trans(g, sub.exit, sub.entry);
 		++*sp;
 	}
 	return ret;
 }
 
 /* S ::= empty | S T */
-static struct subgraph
-parse_sequence(struct graph *g, const char **sp)
+static struct subnfa
+parse_sequence(struct nfa *g, const char **sp)
 {
-	struct subgraph ret;
+	struct subnfa ret;
 	unsigned mid;
 
-	ret.entry = graph_new_node(g);
-	mid = graph_new_node(g);
-	graph_new_trans(g, ret.entry, mid);
+	ret.entry = nfa_new_node(g);
+	mid = nfa_new_node(g);
+	nfa_new_trans(g, ret.entry, mid);
 	while (**sp && **sp != '|' && **sp != ')') {
-		struct subgraph next = parse_term(g, sp);
-		graph_new_trans(g, mid, next.entry);
-		mid = graph_new_node(g);
-		graph_new_trans(g, next.exit, mid);
+		struct subnfa next = parse_term(g, sp);
+		nfa_new_trans(g, mid, next.entry);
+		mid = nfa_new_node(g);
+		nfa_new_trans(g, next.exit, mid);
 	}
 	ret.exit = mid;
 	return ret;
 }
 
 /* F ::= S  |  F '|' S */
-static struct subgraph
-parse_factor(struct graph *g, const char **sp)
+static struct subnfa
+parse_factor(struct nfa *g, const char **sp)
 {
-	struct subgraph ret = parse_sequence(g, sp);
+	struct subnfa ret = parse_sequence(g, sp);
 
 	while (**sp == '|') {
-		struct subgraph alt = ret;
-		ret.entry = graph_new_node(g);
-		ret.exit = graph_new_node(g);
-		graph_new_trans(g, ret.entry, alt.entry);
-		graph_new_trans(g, alt.exit, ret.exit);
+		struct subnfa alt = ret;
+		ret.entry = nfa_new_node(g);
+		ret.exit = nfa_new_node(g);
+		nfa_new_trans(g, ret.entry, alt.entry);
+		nfa_new_trans(g, alt.exit, ret.exit);
 		++*sp; /* '|' */
 		alt = parse_sequence(g, sp);
-		graph_new_trans(g, ret.entry, alt.entry);
-		graph_new_trans(g, alt.exit, ret.exit);
+		nfa_new_trans(g, ret.entry, alt.entry);
+		nfa_new_trans(g, alt.exit, ret.exit);
 	}
 	return ret;
 }
 
 /* E ::= F */
-static struct subgraph
-parse_exp(struct graph *g, const char **sp)
+static struct subnfa
+parse_exp(struct nfa *g, const char **sp)
 {
 	return parse_factor(g, sp);
 }
 
 /* Creates an NFA graph from a test regular expression string */
-static struct graph *
+static struct nfa *
 make_nfa(const char *s)
 {
-	struct subgraph res, sub;
-	struct graph *g = graph_new();
+	struct subnfa res, sub;
+	struct nfa *g = nfa_new();
 
-	res.entry = graph_new_node(g);
-	res.exit = graph_new_node(g);
-	graph_add_final(g, res.exit, s);
+	res.entry = nfa_new_node(g);
+	res.exit = nfa_new_node(g);
+	nfa_add_final(g, res.exit, s);
 
 	sub = parse_exp(g, &s);
-	graph_new_trans(g, res.entry, sub.entry);
-	graph_new_trans(g, sub.exit, res.exit);
+	nfa_new_trans(g, res.entry, sub.entry);
+	nfa_new_trans(g, sub.exit, res.exit);
 
 	return g;
 }
 
 /** Checks a graph to see if it really is a DFA. Aborts on error */
 static void
-assert_deterministic(const struct graph *g)
+assert_deterministic(const struct nfa *g)
 {
 	unsigned i;
 	unsigned nfinals = 0;
@@ -208,7 +208,7 @@ assert_deterministic(const struct graph *g)
 
 /* Tests if a string is accepted by a DFA */
 static int
-dfa_matches(const struct graph *g, const char *str)
+dfa_matches(const struct nfa *g, const char *str)
 {
 	unsigned state = 0;
 	const char *s;
@@ -259,23 +259,23 @@ testenv(const char *e)
 	if (Debug) { 					\
 		printf("%s:%u: %s =\n", 		\
 			__FILE__, __LINE__, #dfa);	\
-		graph_dump(stdout, dfa, -1);		\
+		nfa_dump(stdout, dfa, -1);		\
 	}						\
     } while (0)
 
 /* 
  * MAKE_DFA(dfa, re) is the same as:
- *    dfa = graph_dfa(make_nfa(re)) 
+ *    dfa = nfa_dfa(make_nfa(re)) 
  * but with more verbosity.
  */
 #define MAKE_DFA(dfa, re) do {				\
-		struct graph *nfa;			\
+		struct nfa *nfa;			\
 		const char *_re = re;			\
 		dprintf("\n%s:%u: make: /%s/\n", 	\
 			__FILE__,__LINE__,_re);		\
 		nfa = make_nfa(_re);			\
 		DUMP(nfa);				\
-		graph_to_dfa(nfa);			\
+		nfa_to_dfa(nfa);			\
 		dfa = nfa;				\
 		DUMP(dfa);				\
 		assert_deterministic(dfa);		\
@@ -287,7 +287,7 @@ main()
 	Debug = testenv("DEBUG");
 	{
 		/* Empty pattern */
-		struct graph *dfa;
+		struct nfa *dfa;
 		MAKE_DFA(dfa, "");
 		assert(dfa_matches(dfa, ""));
 		assert(!dfa_matches(dfa, "x"));
@@ -295,62 +295,62 @@ main()
 		assert(dfa->nodes[0].nfinals == 1);
 		assert(strcmp(dfa->nodes[0].finals[0], "") == 0);
 
-		/* graph_add_final() */
+		/* nfa_add_final() */
 		const char * const s = "TEST";
-		graph_add_final(dfa, 0, s);
-		graph_add_final(dfa, 0, s);
-		graph_add_final(dfa, 0, s);
+		nfa_add_final(dfa, 0, s);
+		nfa_add_final(dfa, 0, s);
+		nfa_add_final(dfa, 0, s);
 		assert(dfa->nodes[0].nfinals == 2);
 		assert(dfa->nodes[0].finals[1] == s);
 
-		graph_free(dfa);
+		nfa_free(dfa);
 	}
 	{
 		/* Single character */
-		struct graph *dfa;
+		struct nfa *dfa;
 		MAKE_DFA(dfa, "c");
 		assert(dfa_matches(dfa, "c"));
 		assert(!dfa_matches(dfa, ""));
 		assert(!dfa_matches(dfa, "cc"));
 		assert(!dfa_matches(dfa, "cx"));
 		assert(!dfa_matches(dfa, "x"));
-		graph_free(dfa);
+		nfa_free(dfa);
 	}
 	{
 		/* Sequence of characters, character classes */
-		struct graph *dfa;
+		struct nfa *dfa;
 		MAKE_DFA(dfa, "[a-c][a-c][a-c]");
 		assert(dfa_matches(dfa, "abc"));
 		assert(dfa_matches(dfa, "aaa"));
 		assert(!dfa_matches(dfa, "a"));
 		assert(!dfa_matches(dfa, "aaaa"));
 		assert(!dfa_matches(dfa, "aad"));
-		graph_free(dfa);
+		nfa_free(dfa);
 	}
 	{
 		/* Disjunctions */
-		struct graph *dfa;
+		struct nfa *dfa;
 		MAKE_DFA(dfa, "a|b");
 		assert(dfa_matches(dfa, "a"));
 		assert(dfa_matches(dfa, "b"));
 		assert(!dfa_matches(dfa, "c"));
 		assert(!dfa_matches(dfa, ""));
-		graph_free(dfa);
+		nfa_free(dfa);
 	}
 	{
 		/* Kleene star */
-		struct graph *dfa;
+		struct nfa *dfa;
 		MAKE_DFA(dfa, "a*");
 		assert(dfa_matches(dfa, ""));
 		assert(dfa_matches(dfa, "a"));
 		assert(dfa_matches(dfa, "aaaaaa"));
 		assert(!dfa_matches(dfa, "aaaaac"));
 		assert(!dfa_matches(dfa, "caaaaa"));
-		graph_free(dfa);
+		nfa_free(dfa);
 	}
 	{
 		/* Overlapping disjunctions */
-		struct graph *dfa;
+		struct nfa *dfa;
 		MAKE_DFA(dfa, "[a-d]x|[c-f]y");
 		assert(dfa_matches(dfa, "ax"));
 		assert(dfa_matches(dfa, "bx"));
@@ -364,10 +364,10 @@ main()
 		assert(!dfa_matches(dfa, "ay"));
 		assert(!dfa_matches(dfa, "x"));
 		assert(!dfa_matches(dfa, "cc"));
-		graph_free(dfa);
+		nfa_free(dfa);
 	}
 	{
-		struct graph *dfa;
+		struct nfa *dfa;
 		MAKE_DFA(dfa, "aca*|a*ba");
 
 		assert(dfa_matches(dfa, "ac"));
@@ -381,7 +381,7 @@ main()
 		assert(!dfa_matches(dfa, "ca"));
 		assert(!dfa_matches(dfa, "ab"));
 		assert(!dfa_matches(dfa, "abca"));
-		graph_free(dfa);
+		nfa_free(dfa);
 	}
 
 	return 0;

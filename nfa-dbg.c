@@ -24,7 +24,7 @@ putc_escaped(unsigned ch, FILE *file) {
  * intended for debugging/inspection.
  */
 void
-graph_dump(FILE *file, const struct graph *g, int current_state)
+nfa_dump(FILE *file, const struct nfa *g, int current_state)
 {
 	unsigned i, j, k;
 	for (i = 0; i < g->nnodes; ++i) {

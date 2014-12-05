@@ -8,8 +8,8 @@
 
 /* graph */
 
-struct graph *
-graph_init(struct graph *g)
+struct nfa *
+nfa_init(struct nfa *g)
 {
 	g->nnodes = 0;
 	g->nodes = 0;
@@ -17,7 +17,7 @@ graph_init(struct graph *g)
 }
 
 void
-graph_fini(struct graph *g)
+nfa_fini(struct nfa *g)
 {
 	unsigned i, j;
 	for (i = 0; i < g->nnodes; i++) {
@@ -33,29 +33,29 @@ graph_fini(struct graph *g)
 	g->nnodes = 0;
 }
 
-struct graph *
-graph_new()
+struct nfa *
+nfa_new()
 {
-	struct graph *g = malloc(sizeof *g);
+	struct nfa *g = malloc(sizeof *g);
 
 	if (g) {
-		graph_init(g);
+		nfa_init(g);
 	}
 	return g;
 }
 
 
 void
-graph_free(struct graph *g)
+nfa_free(struct nfa *g)
 {
 	if (g) {
-		graph_fini(g);
+		nfa_fini(g);
 		free(g);
 	}
 }
 
 unsigned
-graph_new_node(struct graph *g)
+nfa_new_node(struct nfa *g)
 {
 	unsigned i;
 	if ((g->nnodes % NODEINC) == 0) {
@@ -68,7 +68,7 @@ graph_new_node(struct graph *g)
 }
 
 struct transition *
-graph_new_trans(struct graph *g, unsigned from, unsigned to)
+nfa_new_trans(struct nfa *g, unsigned from, unsigned to)
 {
 	struct node *n = &g->nodes[from];
 	struct transition *trans;
@@ -83,7 +83,7 @@ graph_new_trans(struct graph *g, unsigned from, unsigned to)
 }
 
 void
-graph_add_final(struct graph *g, unsigned i, const void *final)
+nfa_add_final(struct nfa *g, unsigned i, const void *final)
 {
 	struct node *n = &g->nodes[i];
 	unsigned j;
@@ -114,7 +114,7 @@ transition_is_epsilon(const struct transition *t)
  * @param s the set to expand to epsilon closure
  */
 void
-epsilon_closure(const struct graph *g, bitset *s)
+epsilon_closure(const struct nfa *g, bitset *s)
 {
 	unsigned ni, j;
 	struct node *n;
@@ -144,13 +144,13 @@ epsilon_closure(const struct graph *g, bitset *s)
  * capacity as the number of nodes in the nfa.
  */
 struct equiv {
-	const struct graph *nfa;
+	const struct nfa *nfa;
 	unsigned max, avail;
 	bitset **set;
 };
 
 static void
-equiv_init(struct equiv *equiv, const struct graph *nfa)
+equiv_init(struct equiv *equiv, const struct nfa *nfa)
 {
 	equiv->nfa = nfa;
 	equiv->max = 0;
@@ -198,7 +198,7 @@ equiv_cleanup(struct equiv *equiv) {
  * Note that this may add nodes to the DFA.
  */
 static unsigned
-equiv_lookup(struct graph *dfa, struct equiv *equiv, const bitset *bs)
+equiv_lookup(struct nfa *dfa, struct equiv *equiv, const bitset *bs)
 {
 	unsigned i, j, n;
 
@@ -210,13 +210,13 @@ equiv_lookup(struct graph *dfa, struct equiv *equiv, const bitset *bs)
 	}
 
 	/* Haven't seen that NFA set before, so let's allocate a DFA node */
-	n = graph_new_node(dfa);
+	n = nfa_new_node(dfa);
 
 	/* Merge the set of final pointers */
 	bitset_for(j, bs) {
 		const struct node *jnode = &equiv->nfa->nodes[j];
 		for (i = 0; i < jnode->nfinals; ++i) {
-			graph_add_final(dfa, n, jnode->finals[i]);
+			nfa_add_final(dfa, n, jnode->finals[i]);
 		}
 	}
 
@@ -252,7 +252,7 @@ unsigned_cmp(const void *a, const void *b)
  * @return the array of breakpoints.
  */
 static unsigned *
-cclass_breaks(const struct graph *nfa, const bitset *nodes, unsigned *nbreaks_return)
+cclass_breaks(const struct nfa *nfa, const bitset *nodes, unsigned *nbreaks_return)
 {
 	unsigned ni;
 	unsigned i, j;
@@ -320,7 +320,7 @@ cclass_breaks(const struct graph *nfa, const bitset *nodes, unsigned *nbreaks_re
  * @param nfa the input (non-deterministic) graph
  */
 static void
-make_dfa(struct graph *dfa, const struct graph *nfa)
+make_dfa(struct nfa *dfa, const struct nfa *nfa)
 {
 	struct bitset *bs;
 	struct equiv equiv;
@@ -399,7 +399,7 @@ make_dfa(struct graph *dfa, const struct graph *nfa)
 				}
 			}
 			if (!t) {
-				t = graph_new_trans(dfa, ei, di);
+				t = nfa_new_trans(dfa, ei, di);
 				t->cclass = cclass_new();
 			}
 
@@ -415,10 +415,10 @@ make_dfa(struct graph *dfa, const struct graph *nfa)
 }
 
 void
-graph_to_dfa(struct graph *g)
+nfa_to_dfa(struct nfa *g)
 {
-	struct graph nfa = *g;
-	graph_init(g);
+	struct nfa nfa = *g;
+	nfa_init(g);
 	make_dfa(g, &nfa);
-	graph_fini(&nfa);
+	nfa_fini(&nfa);
 }

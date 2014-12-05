@@ -3,7 +3,7 @@
 #include "nfa.h"
 
 struct globset {
-	struct graph g;
+	struct nfa g;
 	unsigned deterministic;
 	const char *error;
 	stri error_position;
@@ -57,24 +57,24 @@ patterni_accepted(struct patterni *pi)
  */
 
 /*
- * Intermediate subgraph during Thompson's construction method.
- * Rule of thumb: never return a subgraph with a *backwards* epislon
+ * Intermediate subnfa during Thompson's construction method.
+ * Rule of thumb: never return a subnfa with a *backwards* epislon
  * transition from final to initial. (But a forward epsilon trans between
  * the initial and final is OK).
- * This means that any subgraph returned can safely have a forward-
+ * This means that any subnfa returned can safely have a forward-
  * or backwards epsilon transition placed on it
  */
-struct subgraph {
+struct subnfa {
         unsigned initial;
 	unsigned final;
 	const char *error;
 };
 #define IS_ERROR_SUBGRAPH(subg) ((subg).error)
 
-static struct subgraph
-subgraph_error(const char *error)
+static struct subnfa
+subnfa_error(const char *error)
 {
-	struct subgraph sg;
+	struct subnfa sg;
 	sg.initial = 0;
 	sg.final = 0;
 	sg.error = error;
@@ -82,7 +82,7 @@ subgraph_error(const char *error)
 }
 
 /*
- * Returns an empty subgraph frame, with
+ * Returns an empty subnfa frame, with
  * two newly allocated states, initial and final
  * serving as the entry and exit states of an expression.
  *
@@ -91,19 +91,19 @@ subgraph_error(const char *error)
  *    ○      ●
  *    └──────┘
  */
-static struct subgraph
-subgraph_frame(struct graph *g)
+static struct subnfa
+subnfa_frame(struct nfa *g)
 {
-	struct subgraph sg;
-	sg.initial = graph_new_node(g);
-	sg.final = graph_new_node(g);
+	struct subnfa sg;
+	sg.initial = nfa_new_node(g);
+	sg.final = nfa_new_node(g);
 	sg.error = 0;
 	return sg;
 }
 
 /*
- * Returns a subgraph with the inner subgraph simply linked.
- * This is the basis for constructing more complicated subgraphs.
+ * Returns a subnfa with the inner subnfa simply linked.
+ * This is the basis for constructing more complicated subnfas.
  *
  *    ┌───────────────┐
  *    │box            │
@@ -112,16 +112,16 @@ subgraph_frame(struct graph *g)
  *    │   └───────┘   │
  *    └───────────────┘
  */
-static struct subgraph
-subgraph_box(struct graph *g, struct subgraph inner)
+static struct subnfa
+subnfa_box(struct nfa *g, struct subnfa inner)
 {
-	struct subgraph box = subgraph_frame(g);
-	graph_new_trans(g, box.initial, inner.initial);
-	graph_new_trans(g, inner.final, box.final);
+	struct subnfa box = subnfa_frame(g);
+	nfa_new_trans(g, box.initial, inner.initial);
+	nfa_new_trans(g, inner.final, box.final);
 	return box;
 }
 
-static struct subgraph parse_sequence(struct graph *g, stri *i);
+static struct subnfa parse_sequence(struct nfa *g, stri *i);
 
 /*
  * Parses ?(.|..) *(.|..) +(.|..) @(.|..) !(.|..)
@@ -148,44 +148,44 @@ static struct subgraph parse_sequence(struct graph *g, stri *i);
  *                     └─────────────┘  └─────────────┘
  *
  */
-static struct subgraph
-parse_group(struct graph *g, stri *i, unsigned kind)
+static struct subnfa
+parse_group(struct nfa *g, stri *i, unsigned kind)
 {
 	if (kind == '!') {
-		return subgraph_error("!(...) is not supported");
+		return subnfa_error("!(...) is not supported");
 	}
 	stri_inc(*i); /* '(' */
 
-	struct subgraph alt = subgraph_frame(g);
+	struct subnfa alt = subnfa_frame(g);
 	while (stri_more(*i) && stri_at(*i) != ')') {
-		struct subgraph seq = parse_sequence(g, i);
+		struct subnfa seq = parse_sequence(g, i);
 		if (IS_ERROR_SUBGRAPH(seq)) {
 			return seq;
 		}
-		graph_new_trans(g, alt.initial, seq.initial);
-		graph_new_trans(g, seq.final, alt.final);
+		nfa_new_trans(g, alt.initial, seq.initial);
+		nfa_new_trans(g, seq.final, alt.final);
 	}
 	if (!stri_more(*i)) {
-		return subgraph_error("unclosed (");
+		return subnfa_error("unclosed (");
 	}
 	stri_inc(*i); /* ')' */
 
 	if (g->nodes[alt.initial].ntrans == 0) {
 		/* empty alt, () */
-		graph_new_trans(g, alt.initial, alt.final);
+		nfa_new_trans(g, alt.initial, alt.final);
 	}
 
-	struct subgraph ret = subgraph_box(g, alt);
+	struct subnfa ret = subnfa_box(g, alt);
 	switch (kind) {
 	case '?':
-		graph_new_trans(g, ret.initial, ret.final);
+		nfa_new_trans(g, ret.initial, ret.final);
 		break;
 	case '*':
-		graph_new_trans(g, ret.initial, ret.final);
-		graph_new_trans(g, alt.final, alt.initial);
+		nfa_new_trans(g, ret.initial, ret.final);
+		nfa_new_trans(g, alt.final, alt.initial);
 		break;
 	case '+':
-		graph_new_trans(g, alt.final, alt.initial);
+		nfa_new_trans(g, alt.final, alt.initial);
 		break;
 	case '@':
 		break;
@@ -194,14 +194,14 @@ parse_group(struct graph *g, stri *i, unsigned kind)
 }
 
 /* Parse a [...] character class; after the '[' has been consumed. */
-static struct subgraph
-parse_cclass(struct graph *g, stri *i)
+static struct subnfa
+parse_cclass(struct nfa *g, stri *i)
 {
-	struct subgraph sg = subgraph_frame(g);
+	struct subnfa sg = subnfa_frame(g);
 	cclass *cc = cclass_new();
 	int invert = 0;
 	struct transition *trans;
-	trans = graph_new_trans(g, sg.initial, sg.final);
+	trans = nfa_new_trans(g, sg.initial, sg.final);
 	trans->cclass = cc;
 
 	if (stri_more(*i) && stri_at(*i) == '!') {
@@ -215,7 +215,7 @@ parse_cclass(struct graph *g, stri *i)
 	for (;;) {
 		unsigned lo, hi;
 		if (!stri_more(*i)) {
-			return subgraph_error("unclosed [");
+			return subnfa_error("unclosed [");
 		}
 		lo = stri_utf8_inc(i);
 		if (lo == ']')
@@ -225,7 +225,7 @@ parse_cclass(struct graph *g, stri *i)
 		if (stri_more(*i) && stri_at(*i) == '-') {
 			stri_inc(*i);
 			if (!stri_more(*i)) {
-				return subgraph_error("unclosed [");
+				return subnfa_error("unclosed [");
 			}
 			hi = stri_utf8_inc(i);
 			if (stri_more(*i) && hi == '\\')
@@ -234,10 +234,10 @@ parse_cclass(struct graph *g, stri *i)
 			hi = lo;
 		}
 		if (hi < lo) {
-			return subgraph_error("bad character class");
+			return subnfa_error("bad character class");
 		}
 		if (lo == '/' || hi == '/') {
-			return subgraph_error(
+			return subnfa_error(
 				"cannot have / in character class");
 		}
 		if (lo < '/' && '/' < hi) {
@@ -269,11 +269,11 @@ question_cclass()
 }
 
 /* parses a non-sequence expression */
-static struct subgraph
-parse_atom(struct graph *g, stri *i)
+static struct subnfa
+parse_atom(struct nfa *g, stri *i)
 {
 	/* assert(stri_more(*i)); */
-	struct subgraph sg;
+	struct subnfa sg;
 	unsigned ch = stri_utf8_inc(i);
 	cclass *cc;
 
@@ -286,14 +286,14 @@ parse_atom(struct graph *g, stri *i)
 		return parse_cclass(g, i);
 	}
 	if (ch == '*') {
-		sg = subgraph_frame(g);
-		struct subgraph q = subgraph_frame(g); /* The "?" subgraph */
+		sg = subnfa_frame(g);
+		struct subnfa q = subnfa_frame(g); /* The "?" subnfa */
 		cc = question_cclass();
-		graph_new_trans(g, sg.initial, q.initial);
-		graph_new_trans(g, q.initial, q.final)->cclass = cc;
-		graph_new_trans(g, q.final, sg.final);
-		graph_new_trans(g, q.initial, q.final);
-		graph_new_trans(g, q.final, q.initial);
+		nfa_new_trans(g, sg.initial, q.initial);
+		nfa_new_trans(g, q.initial, q.final)->cclass = cc;
+		nfa_new_trans(g, q.final, sg.final);
+		nfa_new_trans(g, q.initial, q.final);
+		nfa_new_trans(g, q.final, q.initial);
 		return sg;
 	}
 
@@ -306,8 +306,8 @@ parse_atom(struct graph *g, stri *i)
 		}
 		cclass_add(cc, ch, ch + 1);
 	}
-	sg = subgraph_frame(g);
-	graph_new_trans(g, sg.initial, sg.final)->cclass = cc;
+	sg = subnfa_frame(g);
+	nfa_new_trans(g, sg.initial, sg.final)->cclass = cc;
 	return sg;
 }
 
@@ -321,10 +321,10 @@ parse_atom(struct graph *g, stri *i)
  *    │   └──────┘   └──────┘         └─────┘    │
  *    └──────────────────────────────────────────┘
  */
-static struct subgraph
-parse_sequence(struct graph *g, stri *i)
+static struct subnfa
+parse_sequence(struct nfa *g, stri *i)
 {
-	struct subgraph seq = subgraph_frame(g);
+	struct subnfa seq = subnfa_frame(g);
 	unsigned last = seq.initial;
 
 	while (stri_more(*i)) {
@@ -333,14 +333,14 @@ parse_sequence(struct graph *g, stri *i)
 			break;
 		}
 
-		struct subgraph atom = parse_atom(g, i);
+		struct subnfa atom = parse_atom(g, i);
 		if (IS_ERROR_SUBGRAPH(atom)) {
 			return atom;
 		}
-		graph_new_trans(g, last, atom.initial);
+		nfa_new_trans(g, last, atom.initial);
 		last = atom.final;
 	}
-	graph_new_trans(g, last, seq.final);
+	nfa_new_trans(g, last, seq.final);
 	return seq;
 }
 
@@ -348,31 +348,31 @@ struct pattern *
 pattern_new(const str *glob)
 {
 	struct pattern *pat = malloc(sizeof *pattern);
-	graph_init(&pat->dfa);
+	nfa_init(&pat->dfa);
 
-	struct graph *g = graph_new();
-	struct subgraph outer = subgraph_frame(g);
+	struct nfa *g = nfa_new();
+	struct subnfa outer = subnfa_frame(g);
 
 	stri ip = stri_str(glob);
-	struct subgraph seq = parse_sequence(g, &ip);
+	struct subnfa seq = parse_sequence(g, &ip);
 	if (IS_ERROR_SUBGRAPH(seq)) {
 		pat->error = seq.error;
 		pat->error_position = ip;
-		graph_free(g);
+		nfa_free(g);
 		return pat;
 	}
-	graph_new_trans(g, outer.initial, seq.initial);
-	graph_new_trans(g, seq.final, outer.final);
+	nfa_new_trans(g, outer.initial, seq.initial);
+	nfa_new_trans(g, seq.final, outer.final);
 	g->nodes[outer.final].final = 1;
 
 	/* Convert the NFA g into a DFA */
-	struct graph *dfa = graph_dfa(g);
+	struct nfa *dfa = nfa_dfa(g);
 	pat->dfa = *dfa;
 	free(dfa);
 
 	pat->error = 0;
 	pat->error_position = stri_str(0);
-	graph_free(g);
+	nfa_free(g);
 
 	return pattern;
 }
@@ -380,7 +380,7 @@ pattern_new(const str *glob)
 void
 pattern_free(struct pattern *pattern)
 {
-	graph_fini(&pattern->dfa);
+	nfa_fini(&pattern->dfa);
 	free(pattern);
 }
 
