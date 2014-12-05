@@ -12,7 +12,9 @@
 struct mm {
 	const char *file;
 	int lineno;
-	const char **text;
+	const char * const *text;
+	unsigned texti;    /* next index into text[] */
+	const char *textp; /* current char pos in text[texti-1] */
 	macro *macro;
 	struct scope *scope;
 };
@@ -21,11 +23,15 @@ static int
 mm_read(struct parser *p, char *dst, unsigned len)
 {
 	struct mm *mm = parser_get_context(p);
-	int rlen;
-	const char **t;
-	for (t = mm->text; *t; ++t) {
-		for (; **t && len--; ++rlen) {
-			*dst++ = *(*t)++;
+	int rlen = 0;
+
+	while (len && mm->textp) {
+		if (*mm->textp) {
+			*dst++ = *mm->textp++;
+			len--;
+			rlen++;
+		} else {
+			mm->textp = mm->text[++mm->texti];
 		}
 	}
 	return rlen;
@@ -57,6 +63,43 @@ mm_error(struct parser *p, unsigned lineno, unsigned u8col, const char *msg)
 	struct mm *mm = parser_get_context(p);
 	fprintf(stderr, "%s:%d: parse error at (%u,%u): %s\n",
 		mm->file, mm->lineno, lineno, u8col, msg);
+
+	fprintf(stderr, "parser text was:\n");
+	unsigned tline = 0;
+	unsigned tcol = 0;
+	unsigned texti = 0;
+	const char *textp = mm->text[0];
+	while (textp) {
+		if (*textp) {
+			if (tcol == 0) {
+				tline++;
+				fprintf(stderr, "\033[90m%4d:\033[m ", tline);
+			}
+			char ch = *textp++;
+			int hilite = (lineno == tline && tcol == u8col);
+			if (hilite) {
+				fprintf(stderr, "\033[31;1;7m");
+			} else if (ch == '\n' || ch == '\t') {
+				hilite = 1;
+				fprintf(stderr, "\033[90m");
+			}
+			putc(ch == '\n' ? '$' : 
+			     ch == '\t' ? '>' :
+			     ch, stderr);
+			if (hilite) {
+				fprintf(stderr, "\033[m");
+			}
+			if (ch == '\n') {
+				putc('\n', stderr);
+				tcol = 0;
+			} else {
+				tcol++;
+			}
+		} else {
+			textp = mm->text[++texti];
+		}
+	}
+
 	abort();
 }
 
@@ -139,14 +182,16 @@ assert_expands_(const char *file, int lineno,
 		.directive = mm_directive,
 		.error = mm_error,
 	};
-	const char *texts[] = { ".macro ", text, "\n", defines, 0 };
+	const char * const texts[] = { ".macro ", text, "\n", defines, 0 };
 	struct mm mm = {
 		.file = file,
 		.lineno = lineno,
 		.text = texts,
+		.texti = 0, .textp = "",
 		.macro = 0,
 		.scope = scope_new(0, (void (*)(void *))macro_free),
 	};
+
 	parse(&cb, &mm);
 
 	str *actual, **x = &actual;
@@ -185,5 +230,7 @@ int
 main()
 {
 	assert_expands("", "");
+	assert_expands("abc", "abc");
+	assert_expands("ab$(nothing)c", "abc");
 	return 0;
 }
