@@ -31,7 +31,7 @@ mm_read(struct parser *p, char *dst, unsigned len)
 			len--;
 			rlen++;
 		} else {
-			mm->textp = mm->text[++mm->texti];
+			mm->textp = mm->text[mm->texti++];
 		}
 	}
 	return rlen;
@@ -231,6 +231,7 @@ main()
 {
 	assert_expands("", "");
 	assert_expands("abc", "abc");
-	assert_expands("ab$(nothing)c", "abc");
+	assert_expands("ab$(X)c", "abc");
+	assert_expands("ab$()c", "abc");
 	return 0;
 }
