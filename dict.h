@@ -17,8 +17,11 @@ struct dict;
  * Dictionaries are collection of immutable keys associated with
  * mutable values.
  * @param free_value  a function that will release values.
+ *                    or @c NULL to indicate nothing
  * @param key_cmp     a function to compare two keys are the same.
+ *                    or @c NULL to use pointer equality
  * @param key_hash    a function to hash a key into 0..UINT_MAX
+ *                    or @c NULL to use a simple pointer address hash
  * @return a pointer that should be deallocated with #dict_free().
  */
 struct dict *dict_new(void (*free_value)(void *value),
