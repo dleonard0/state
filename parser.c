@@ -681,10 +681,13 @@ parse_one(struct parser *p)
 	if (!parse_macro(p, 
 		         CLOSE_LF | CLOSE_HASH | CLOSE_COLON | CLOSE_EQUALS,
 		         &lead))
+	{
 		return 0;
+	}
 	int ch = peek(p);
-	if (ch == '#' || ch == '\n' || ch == EOF)
+	if (ch == '#' || ch == '\n' || ch == EOF) {
 		return error(p, "missing separator");
+	}
 
 	/* assignment */
 
