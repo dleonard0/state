@@ -267,5 +267,6 @@ main()
 	/* subst */
 	assert_expands("a$(subst fofobar,M,$(X))c", 	"afofofoMc", 
 		       "X = fofofofofobar");
+	assert_expands("a$(subst ,b,x)c",		"axbc");
 	return 0;
 }
