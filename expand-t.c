@@ -24,7 +24,7 @@ mm_read(struct parser *p, char *dst, unsigned len)
 	int rlen;
 	const char **t;
 	for (t = mm->text; *t; ++t) {
-		for (rlen = 0; **t && len--; ++rlen) {
+		for (; **t && len--; ++rlen) {
 			*dst++ = *(*t)++;
 		}
 	}
