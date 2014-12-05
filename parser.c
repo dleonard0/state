@@ -262,6 +262,7 @@ maybe_make_reference_atom(macro *ref)
 {
 	if (ref->type == MACRO_REFERENCE &&
 	    ref->reference &&
+	    ref->reference->macro &&
 	    ref->reference->macro->type == MACRO_LITERAL &&
 	    ref->reference->macro->literal &&
 	    !ref->reference->macro->literal->next)
