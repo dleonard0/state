@@ -7,7 +7,7 @@ CFLAGS += -std=gnu99
 default: check
 
 TESTS  = t-str t-dict t-atom t-macro t-scope t-parser t-cclass t-bitset t-graph
-TESTS += t-globs t-vector
+TESTS += t-globs t-vector t-expand
 
 t-str:    str-t.o    str.o
 t-dict:   dict-t.o   dict.o
@@ -20,6 +20,7 @@ t-bitset: bitset-t.o bitset.o
 t-graph:  graph-t.o  cclass.o bitset.o graph.o graph-dbg.o
 t-globs:  globs-t.o  cclass.o bitset.o graph.o str.o globs.o graph-dbg.o
 t-vector: vector-t.o
+t-expand: expand-t.o str.o dict.o atom.o macro.o parser.o scope.o expand.o
 #t-match:  match-t.o  cclass.o bitset.o graph.o str.o match.o
 $(TESTS):
 	$(LINK.c) -o $@ $^
