@@ -52,11 +52,11 @@ mm_define(struct parser *p, macro *lhs, int defkind, macro *text)
 }
 
 static void
-mm_error(struct parser *p, unsigned lineno, const char *msg)
+mm_error(struct parser *p, unsigned lineno, unsigned u8col, const char *msg)
 {
 	struct mm *mm = parser_get_context(p);
-	fprintf(stderr, "%s:%d: parse error: %s\n",
-		mm->file, mm->lineno, msg);
+	fprintf(stderr, "%s:%d: parse error at (%u,%u): %s\n",
+		mm->file, mm->lineno, lineno, u8col, msg);
 	abort();
 }
 

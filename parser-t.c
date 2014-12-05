@@ -193,11 +193,13 @@ cb_command(struct parser *p, macro *text)
 }
 
 static void
-cb_error(struct parser *p, unsigned lineno, const char *msg)
+cb_error(struct parser *p, unsigned lineno, unsigned u8col, const char *msg)
 {
 	struct cb_context *context = parser_get_context(p);
 	cb_puts(context, "ERROR ");
 	cb_puti(context, lineno);
+	cb_putc(context, ':');
+	cb_puti(context, u8col);
 	cb_putc(context, ' ');
 	cb_puts(context, msg);
 	cb_putc(context, '\n');

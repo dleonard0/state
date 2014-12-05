@@ -117,10 +117,12 @@ struct parser_cb {
 	/**
 	 * Called when there is an unrecoverable parse error.
 	 * @param lineno  the line number of the error
+	 * @param utf8col the column of the error (starting at 1)
 	 * @param msg     error text
 	 * Default behaviour: nothing.
 	 */
-	void (*error)(struct parser *p, unsigned lineno, const char *msg);
+	void (*error)(struct parser *p, unsigned lineno, 
+		      unsigned utf8col, const char *msg);
 };
 
 /**

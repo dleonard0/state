@@ -13,6 +13,7 @@ struct parser {
 	const struct parser_cb *cb;
 	void *context;
 	unsigned lineno;
+	unsigned utf8col;
 	char lookahead_buf[MAX_LOOKAHEAD];
 	char *lookahead;
 	char *lookahead_end;
@@ -29,6 +30,7 @@ parser_init(struct parser *p, const struct parser_cb *cb, void *context)
 	p->cb = cb;
 	p->context = context;
 	p->lineno = 1;
+	p->utf8col = 1;
 	p->lookahead = p->lookahead_buf;
 	p->lookahead_end = p->lookahead_buf;
 	p->last_read = 1;
@@ -94,10 +96,16 @@ next(struct parser *p)
 	int ret = peek(p);
 
 	if (ret != EOF) {
-		++p->lookahead;
+		++p->lookahead; /* advance peek pointer */
+		if ((ret & ~0x7f) == 0x00 || /* ASCII */
+		    (ret & ~0x3f) == 0xc0)   /* UTF-8 start sequence */
+		{
+			++p->utf8col;
+		}
 	}
 	if (ret == '\n') {
 		++p->lineno;
+		p->utf8col = 1;
 	}
 	return ret;
 }
@@ -205,7 +213,7 @@ static int
 error(struct parser *p, const char *msg)
 {
 	if (p->cb->error) {
-		p->cb->error(p, p->lineno, msg);
+		p->cb->error(p, p->lineno, p->utf8col, msg);
 	}
 	return 0;
 }
