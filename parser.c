@@ -65,7 +65,7 @@ lookahead(struct parser *p, unsigned n)
 			p->lookahead_end = p->lookahead_buf + avail;
 		}
 		if (p->last_read > 0) {
-			p->last_read = p->cb->read(p, p->lookahead_end, 
+			p->last_read = p->cb->read(p, p->lookahead_end,
 						   MAX_LOOKAHEAD - avail);
 		}
 		if (p->last_read <= 0) {
@@ -84,7 +84,7 @@ peek(struct parser *p)
 	if (!lookahead(p, 1)) {
 		ret = EOF;
 	} else {
-	    	ret = *p->lookahead;
+		ret = *p->lookahead;
 	}
 	return ret;
 }
@@ -148,7 +148,7 @@ can_read_(struct parser *p, const char *s, int len)
 static int
 could_read_w_(struct parser *p, const char *s, int len)
 {
-	return lookahead(p, len + 1) && 
+	return lookahead(p, len + 1) &&
 	       memcmp(p->lookahead, s, len) == 0 &&
 	       !isalnum(p->lookahead[len]);
 }
@@ -251,8 +251,8 @@ expect_eol(struct parser *p)
  */
 
 /*
- * Try to convert the first macro in a macro_list into an atom. 
- * This is for when $(FOO BAR) is parsed, and the FOO atom 
+ * Try to convert the first macro in a macro_list into an atom.
+ * This is for when $(FOO BAR) is parsed, and the FOO atom
  * can be resolved early once.
  * It doesn't work for (the outermost form of) $($(VAR)), though
  * so that case is left alone.
@@ -363,7 +363,7 @@ parse_ident(struct parser *p, atom *ident_return)
 	    *b++ = next(p);
 	    ch = peek(p);
 	    if (ch != '_' && ch != '$' && !isalnum(ch))
-	    	break;
+		break;
 	}
 	if (b == bufend) {
 		return error(p, "identifier too long");
@@ -379,7 +379,7 @@ parse_ident(struct parser *p, atom *ident_return)
  *	           |   reference_macro macro
  *                 ;
  * literal_macro   ::= '$$'
- *                 |   '\#' 
+ *                 |   '\#'
  *                 |   '\' EOL
  *                 |   (char)+              -- char not '$' or '#'
  *                 ;
@@ -393,10 +393,10 @@ parse_ident(struct parser *p, atom *ident_return)
 #define CLOSE_RBRACE	(1 <<  1)
 #define CLOSE_SPACE	(1 <<  2)
 #define CLOSE_COMMA	(1 <<  3)
-#define CLOSE_LF    	(1 <<  4)
-#define CLOSE_HASH    	(1 <<  5)
-#define CLOSE_COLON    	(1 <<  6)
-#define CLOSE_EQUALS   	(1 <<  7)
+#define CLOSE_LF	(1 <<  4)
+#define CLOSE_HASH	(1 <<  5)
+#define CLOSE_COLON	(1 <<  6)
+#define CLOSE_EQUALS	(1 <<  7)
 #define CLOSE_SEMICOLON	(1 <<  8)
 
 int
@@ -429,7 +429,9 @@ is_close(int ch, unsigned close)
  *
  * @param close bit flags indicating what characters to stop on.
  * @param mp    pointer to the macro to return the result at.
- * @returns 1 on success
+ *              caller should deallocate this regardless of the
+ *              return code.
+ * @returns 1 on success, 0 on failure
  */
 int
 parse_macro(struct parser *p, unsigned close, macro **mp)
@@ -439,8 +441,9 @@ parse_macro(struct parser *p, unsigned close, macro **mp)
 	int ch;
 
 again:
-	if (is_close(peek(p), close))
+	if (is_close(peek(p), close)) {
 	    return 1;
+	}
 
 	/* literal str macro */
 
@@ -449,12 +452,12 @@ again:
 	    if (can_read(p, "$$")) {	/* immediately convert $$ -> $ */
 		*b++ = '$';
 		continue;
-	    } 
+	    }
 	    ch = peek(p);
 	    if (ch == '$')		/* always stop on $ */
-	    	break;
+		break;
 	    if (is_close(ch, close))
-	    	break;
+		break;
 
 	    if (ch == '\\') {		/* always consume char after \ */
 		*b++ = next(p);
@@ -483,7 +486,11 @@ again:
 		next(p); /* skip ( or { */
 		for (;;) {
 		    macro *m = NULL;
-		    if (!parse_macro(p, flags, &m)) return 0;
+		    if (!parse_macro(p, flags, &m)) {
+			macro_free(args_macro);
+			macro_free(m);
+			return 0;
+		    }
 		    args = macro_list_cons(args, m);
 		    if (flags & CLOSE_SPACE) {
 		        skip_wsp(p);
@@ -495,21 +502,24 @@ again:
 			    break;
 			next(p);
 		    }
-		    if (peek(p) == EOF)
+		    if (peek(p) == EOF) {
+			macro_free(args_macro);
 		        return error(p, "unexpected EOF in macro");
+		    }
 		}
 		maybe_make_reference_atom(args_macro);
 		mp = macro_cons(mp, args_macro);
-		if (peek(p) != closech)
-		    return error(p, closech == ')' ? "unclosed (" 
+		if (peek(p) != closech) {
+		    return error(p, closech == ')' ? "unclosed ("
 		                                   : "unclosed {");
+		}
 		next(p); /* skip closech */
 	        goto again;
-	    } 
+	    }
 
 	    if (ch == EOF)
 	        return error(p, "unexpected EOF after $");
-	    if (isspace(ch)) 
+	    if (isspace(ch))
 	        return error(p, "unexpected whitespace after $");
 
 	    /* '$' can also be followed by one UTF8 character */
@@ -518,7 +528,10 @@ again:
 	        macro *args_macro = macro_new_reference();
 		struct macro_list **args = &args_macro->reference;
 
-		if (!parse_utf8(p, utf8)) return 0;
+		if (!parse_utf8(p, utf8)) {
+			macro_free(args_macro);
+			return 0;
+		}
 		macro_list_cons(args, macro_new_atom(atom_s(utf8)));
 		mp = macro_cons(mp, args_macro);
 		goto again;
@@ -556,7 +569,10 @@ parse_one(struct parser *p)
 		next(p);
 
 		m = 0;
-		if (!parse_macro(p, CLOSE_LF, &m)) return 0;
+		if (!parse_macro(p, CLOSE_LF, &m)) {
+			macro_free(m);
+			return 0;
+		}
 		if (!p->in_rule) {
 			macro_free(m);
 			return error(p, "commands commence before rule");
@@ -585,9 +601,14 @@ parse_one(struct parser *p)
 		atom ident;
 
 		next(p);
-		if (!parse_ident(p, &ident)) return 0;
+		if (!parse_ident(p, &ident)) {
+			return 0;
+		}
 		skip_sp(p);
-		if (!parse_macro(p, CLOSE_LF | CLOSE_HASH, &text)) return 0;
+		if (!parse_macro(p, CLOSE_LF | CLOSE_HASH, &text)) {
+			macro_free(text);
+			return 0;
+		}
 
 		maybe_end_rule(p);
 		
@@ -617,23 +638,41 @@ parse_one(struct parser *p)
 		condkind -= negate;
 		skip_sp(p);
 		if (condkind == CONDKIND_IFDEF) {
-		    if (!parse_macro(p, 
-		    	CLOSE_LF|CLOSE_HASH|CLOSE_SPACE,
-			&t1))
-				return 0;
-		    if (!expect_eol(p))
-		    	error(p, "unexpected data after ifdef argument");
+		    if (!parse_macro(p, CLOSE_LF|CLOSE_HASH|CLOSE_SPACE, &t1)) {
+			macro_free(t1);
+			return 0;
+		    }
+		    if (!expect_eol(p)) {
+		        macro_free(t1);
+			return error(p, "unexpected data after ifdef argument");
+		    }
 		} else {
-		    if (!can_readch(p, '('))
-		    	return error(p, "expected '(' after ifeq/ifneq");
-		    if (!parse_macro(p, CLOSE_COMMA, &t1)) return 0;
-		    if (!can_readch(p, ','))
-		    	return error(p, "expected ',' after ifeq/ifneq");
-		    if (!parse_macro(p, CLOSE_RPAREN, &t2)) return 0;
-		    if (!can_readch(p, ')'))
-		    	return error(p, "expected ')' after ifeq/ifneq");
-		    if (!expect_eol(p))
+		    if (!can_readch(p, '(')) {
+			return error(p, "expected '(' after ifeq/ifneq");
+		    }
+		    if (!parse_macro(p, CLOSE_COMMA, &t1)) {
+			macro_free(t1);
+			return 0;
+		    }
+		    if (!can_readch(p, ',')) {
+			macro_free(t1);
+			return error(p, "expected ',' after ifeq/ifneq");
+		    }
+		    if (!parse_macro(p, CLOSE_RPAREN, &t2)) {
+			macro_free(t2);
+			macro_free(t1);
+			return 0;
+		    }
+		    if (!can_readch(p, ')')) {
+			macro_free(t2);
+			macro_free(t1);
+			return error(p, "expected ')' after ifeq/ifneq");
+		    }
+		    if (!expect_eol(p)) {
+			macro_free(t2);
+			macro_free(t1);
 			return error(p, "expected nothing after ')'");
+		    }
 		}
 		if (enabled && p->cb->condition) {
 		    result = p->cb->condition(p, condkind, t1, t2);
@@ -674,19 +713,21 @@ parse_one(struct parser *p)
 		if (!expect_eol(p))
 			return error(p, "expected nothing after endif");
 		return 1;
-    	}
+	}
 
 	/* rule or assignment, read up to a : or = */
 
 	macro *lead = 0;
-	if (!parse_macro(p, 
+	if (!parse_macro(p,
 		         CLOSE_LF | CLOSE_HASH | CLOSE_COLON | CLOSE_EQUALS,
 		         &lead))
 	{
+		macro_free(lead);
 		return 0;
 	}
 	int ch = peek(p);
 	if (ch == '#' || ch == '\n' || ch == EOF) {
+		macro_free(lead);
 		return error(p, "missing separator");
 	}
 
@@ -703,7 +744,10 @@ parse_one(struct parser *p)
 		macro *text = 0;
 		next(p); /* skip '=' */
 		skip_sp(p);
-		if (!parse_macro(p, CLOSE_LF | CLOSE_HASH, &text)) return 0;
+		if (!parse_macro(p, CLOSE_LF | CLOSE_HASH, &text)) {
+			macro_free(text);
+			return 0;
+		}
 		maybe_end_rule(p);
 		if (enabled && p->cb->define) {
 			macro_rtrim(&lead);
@@ -735,22 +779,33 @@ parse_one(struct parser *p)
 			p,
 			CLOSE_LF | CLOSE_HASH | CLOSE_SEMICOLON,
 			&depends))
-				return 0;
-		if (peek(p) != ';' && !expect_eol(p))
+		{
+			macro_free(depends);
+			macro_free(lead);
+			return 0;
+		}
+		if (peek(p) != ';' && !expect_eol(p)) {
+			macro_free(depends);
+			macro_free(lead);
 			return error(p, "unexpected text after rule");
+		}
 		maybe_end_rule(p);
 		if (enabled && p->cb->rule) {
 			p->cb->rule(p, lead, depends);
 		} else {
-			macro_free(lead);
 			macro_free(depends);
+			macro_free(lead);
 		}
+
 		p->in_rule = enabled;
 		if (peek(p) == ';') {
 			macro *m = 0;
 			next(p);
 			skip_sp(p);
-			if (!parse_macro(p, CLOSE_LF, &m)) return 0;
+			if (!parse_macro(p, CLOSE_LF, &m)) {
+			    macro_free(m);
+			    return 0;
+			}
 			if (enabled && p->cb->command) {
 			    p->cb->command(p, m);
 			} else {
@@ -760,6 +815,7 @@ parse_one(struct parser *p)
 		return 1;
 	}
 
+	macro_free(lead);
 	return error(p, "unexpected parse error");
 }
 

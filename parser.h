@@ -50,8 +50,8 @@ struct parser_cb {
 	 * encountered.
 	 * This event may happen anywhere.
 	 * @param p       parser context
-	 * @param lhs     the left-hand-side being defined. It should be
-	 *                expanded and then trimmed
+	 * @param lhs     the left-hand-side being defined,
+	 *                must be TAKEN or freed
 	 * @param defkind the kind of definition
 	 * @param text    the text, which must be TAKEN or freed
 	 *
@@ -76,8 +76,10 @@ struct parser_cb {
 	 * This request may be made at any time.
 	 * @param p        parser context
 	 * @param condkind the kind of conditional (#CONDKIND_IFDEF etc)
-	 * @param t1       the text following the condition
-	 * @param t2       the text following the condition
+	 * @param t1       the text following the condition,
+	 *                 must be TAKEN or freed
+	 * @param t2       the other text following the condition,
+	 *                 must be TAKEN or freed
 	 * @returns true if the condition is true.
 	 *
 	 * Default behaviour: macro_free(t1); macro_free(t2); return 0;
@@ -89,8 +91,10 @@ struct parser_cb {
 	 * It will eventually be followed by a call to #end_rule().
 	 * Rules do not nest.
 	 * @param p       parser context
-	 * @param goal    the goal text
-	 * @param depends the dependency text
+	 * @param goal    the goal text,
+	 *                must be TAKEN or freed
+	 * @param depends the dependency text,
+	 *                must be TAKEN or freed
 	 *
 	 * Default behaviour: macro_free(goal); macro_free(depends);
 	 */
@@ -100,7 +104,8 @@ struct parser_cb {
 	 * Called when a command line is encountered.
 	 * This is only ever called within a rule.
 	 * @param p    parser context
-	 * @param text the command line, without leading TAB character
+	 * @param text the command line, without leading TAB character,
+	 *             must be TAKEN or freed
 	 *
 	 * Default behaviour: macro_free(text)
 	 */
@@ -121,7 +126,7 @@ struct parser_cb {
 	 * @param msg     error text
 	 * Default behaviour: nothing.
 	 */
-	void (*error)(struct parser *p, unsigned lineno, 
+	void (*error)(struct parser *p, unsigned lineno,
 		      unsigned utf8col, const char *msg);
 };
 
@@ -129,7 +134,7 @@ struct parser_cb {
  * Parses some input to completion.
  * The parser will invoke methods on @a cb to obtain
  * text, and then to inform the cb of parse events.
- * 
+ *
  * Parsing stops after cb->read() returns 0 or a negative number.
  *
  * @param cb   callback handler for handling parse events.

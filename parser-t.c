@@ -128,6 +128,7 @@ cb_define(struct parser *p, macro *lhs, int defkind, macro *text)
 	}
 	cb_putm(context, text);
 	cb_putc(context, '\n');
+	macro_free(text);
 }
 
 static void
@@ -142,6 +143,7 @@ cb_directive(struct parser *p, atom ident, macro *text)
 		cb_putm(context, text);
 	}
 	cb_putc(context, '\n');
+	macro_free(text);
 }
 
 static int
@@ -168,6 +170,8 @@ cb_condition(struct parser *p, int condkind, macro *t1, macro *t2)
 		break;
 
 	}
+	macro_free(t1);
+	macro_free(t2);
 	return 0;
 }
 
@@ -181,6 +185,8 @@ cb_rule(struct parser *p, macro *goal, macro *depends)
 	cb_puts(context, " : ");
 	cb_putm(context, depends);
 	cb_putc(context, '\n');
+	macro_free(goal);
+	macro_free(depends);
 }
 
 static void
@@ -190,6 +196,7 @@ cb_command(struct parser *p, macro *text)
 	cb_putc(context, '\t');
 	cb_putm(context, text);
 	cb_putc(context, '\n');
+	macro_free(text);
 }
 
 static void

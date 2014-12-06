@@ -329,6 +329,7 @@ assert_matches_(const char *file, int lineno,
 					file, lineno, matchremain);
 				error = 1;
 			}
+			str_free(result);
 			break;
 		}
 		for (i = 0; i < nexpected; ++i) {
@@ -367,6 +368,7 @@ assert_matches_(const char *file, int lineno,
 			fprintf(stderr, "'\n");
 			error = 1;
 		}
+		str_free(result);
 	}
 	if (error) {
 		exit(1);
