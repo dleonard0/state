@@ -7,6 +7,9 @@
 #include "match.h"
 #include "globs.h"
 #include "str.h"
+#include "nfa-dbg.h"
+
+//#define DEBUG 1
 
 /*------------------------------------------------------------
  * constructors for trees and globs
@@ -44,11 +47,22 @@ make_globs_(const char *file, int lineno, ...)
 
 	va_start(ap, lineno);
 	while ((s = va_arg(ap, const char *))) {
-		str *ss = str_new(s);
-		globs_add(globs, ss, s);
+		int len = strlen(s);
+		const void *ref = s;
+		/* If the glob ends with "=N" then make "N" the ref */
+		if (len > 2 && s[len-2] == '=') {
+			ref = &s[len-1];
+			len -= 2;
+		}
+		str *ss = str_newn(s, len);
+		globs_add(globs, ss, ref);
 		str_free(ss);
 	}
 	globs_compile(globs);
+#if DEBUG
+	fprintf(stderr, "%s:%d: globs:\n", file, lineno);
+	nfa_dump(stderr, (const struct nfa *)globs, 0);
+#endif
 	return globs;
 }
 
@@ -82,7 +96,7 @@ make_tree_(const char *file, int lineno, ...)
 			/* move node to the sibling with c's name */
 			while (*node) {
 				if ((*node)->pathlen == clen &&
-				    strncmp((*node)->path, c, clen))
+				    strncmp((*node)->path, c, clen) == 0)
 					break;
 				node = &(*node)->sibling;
 			}
@@ -152,14 +166,21 @@ struct match **
 test_generate(struct match **mp, const str *prefix, void *gcontext)
 {
 	struct test_context *ctxt = gcontext;
+	stri i;
 
+#if DEBUG
+	fprintf(stderr, "  ");
+	for (i = stri_str(prefix); stri_more(i); stri_inc(i))
+		putc(stri_at(i) & 0x7f, stderr);
+	if (!prefix) fprintf(stderr, "\"\"");
+	fprintf(stderr, ":\n");
+#endif
 	/*
 	 * Search the tree for the prefix, then return a list of the
 	 * found node's children.
 	 */
 	struct tree *node = ctxt->tree;
 	char buf[1024], *b;
-	stri i;
 	for (b = buf, i = stri_str(prefix); stri_more(i); stri_inc(i)) {
 		*b++ = stri_at(i) & 0x7f;
 	}
@@ -185,7 +206,8 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 	}
 	for (; node; node = node->sibling) {
 		str *mstr, **x;
-		x = str_xcats(str_xcat(&mstr, prefix), node->path);
+		x = str_xcatsn(str_xcat(&mstr, prefix), 
+				node->path, node->pathlen);
 		if (node->child) {
 			x = str_xcats(x, "/");
 		}
@@ -195,6 +217,14 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 			newm->flags |= MATCH_DEFERRED;
 		*mp = newm;
 		mp = &newm->next;
+#if DEBUG
+		fprintf(stderr, "    ");
+		for (i = stri_str(newm->str); stri_more(i); stri_inc(i))
+			putc(stri_at(i) & 0x7f, stderr);
+		if (newm->flags & MATCH_DEFERRED)
+			fprintf(stderr, " ...");
+		fprintf(stderr, "\n");
+#endif
 	};
 	return mp;
 }
@@ -212,28 +242,86 @@ static struct generator test_generator = {
 	.free = test_free,
 };
 
+#if DEBUG
+static void
+dump_tree(FILE *f, const struct tree *node, char *prefix)
+{
+	for (; node; node = node->sibling) {
+	    fprintf(f, "  %s%.*s\n", prefix, node->pathlen, node->path);
+	    if (node->child) {
+		char buf[1024];
+		snprintf(buf, sizeof buf, "%s%.*s/", prefix,
+			node->pathlen, node->path);
+		dump_tree(f, node->child, buf);
+	    }
+	}
+}
+#endif
+
 static void
 assert_matches_(const char *file, int lineno,
 	struct globs *globs, struct tree *tree, const char **expected)
 {
 	const char **e;
 	struct test_context tctxt;
+	unsigned i;
 
-	for (e = expected; *e; e++) ;
+#if DEBUG
+	fprintf(stderr, "%s:%d: tree:\n", file, lineno);
+	dump_tree(stderr, tree, "");
+#endif
+
+	/* count the number of expected strings */
+	e = expected;
+	while (*e) e++;
 	unsigned nexpected = e - expected;
-	char *expected_seen = calloc(nexpected + 1, 1);
+
+	/* construct an array of expected info */
+	struct {
+		const char *exp;	/* string to expect */
+		char seen;		/* have we seen it already */
+		unsigned len;		/* length of exp */
+		const char *ref;	/* reference to expect, or 0 */
+	} *exp = malloc(nexpected * sizeof *exp);
+
+	for (i = 0; i < nexpected; i++) {
+		/* if the expected string ends with "=N" then 
+		 * use "N" as the expected reference to strcmp */
+		unsigned len = strlen(expected[i]);
+		exp[i].exp = expected[i];
+		exp[i].seen = 0;
+		if (len > 2 && expected[i][len - 2] == '=') {
+			exp[i].len = len - 2;
+			exp[i].ref = expected[i] + len - 1;
+		} else {
+			exp[i].len = len;
+			exp[i].ref = 0;
+		}
+	}
 
 	tctxt.freed = 0;
 	tctxt.tree = tree;
 
+#if DEBUG
+	fprintf(stderr, "%s:%d: matching...\n", file, lineno);
+#endif
+
 	struct matcher *matcher = matcher_new(globs, &test_generator, &tctxt);
 	unsigned matchremain = nexpected;
-	unsigned i;
-	int error = 0;
 
+	int error = 0;
 	while (!error) {
-		const void *ref;
+		const void *ref = 0;
 		str *result = matcher_next(matcher, &ref);
+#if DEBUG
+		fprintf(stderr, "  * ");
+		stri si;
+		for (si = stri_str(result); stri_more(si); stri_inc(si))
+			putc(stri_at(si) & 0x7f, stderr);
+		if (!result) fprintf(stderr, "(null)");
+		if (result && ref) fprintf(stderr, " = %s", (const char *)ref);
+		fprintf(stderr, "\n");
+#endif
 		if (matchremain == 0) {
 			if (result) {
 				fprintf(stderr, "%s:%d: "
@@ -244,16 +332,28 @@ assert_matches_(const char *file, int lineno,
 			break;
 		}
 		for (i = 0; i < nexpected; ++i) {
-			if (str_eq(result, expected[i])) {
-				if (expected_seen[i]) {
+			if (str_eqn(result, exp[i].exp, exp[i].len)) {
+				if (exp[i].seen) {
 					fprintf(stderr, "%s:%d: "
 						"duplicate match '%s'\n",
 						file, lineno,
-						expected[i]);
+						exp[i].exp);
 					error = 1;
 					break;
 				}
-				expected_seen[i] = 1;
+				if (exp[i].ref && 
+				    strcmp(exp[i].ref, (const char *)ref) != 0)
+				{
+					fprintf(stderr, "%s:%d: "
+						"unexpected '%.*s=%s' "
+						"while matching '%s'\n",
+						file, lineno,
+						exp[i].len, exp[i].exp,
+						(const char *)ref,
+						exp[i].exp);
+					error = 1;
+				}
+				exp[i].seen = 1;
 				matchremain--;
 				break;
 			}
@@ -271,7 +371,7 @@ assert_matches_(const char *file, int lineno,
 	if (error) {
 		exit(1);
 	}
-	free(expected_seen);
+	free(exp);
 	matcher_free(matcher);
 }
 
@@ -280,12 +380,16 @@ main()
 {
 
 	{
-		GLOBS g = make_globs("a");
-		TREE t = make_tree("a", "b", "c");
-		assert_matches(g, t, "a");
+		GLOBS g = make_globs("a=1");
+		TREE t = make_tree("a", "b");
+		assert_matches(g, t, "a=1");
 
 	}
-	// TODO more tests
+	{
+		GLOBS g = make_globs("*/*");
+		TREE t = make_tree("a/", "a/b", "a/c", "b");
+		assert_matches(g, t, "a/b", "a/c");
+	}
 
 	return 0;
 }

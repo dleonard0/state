@@ -21,7 +21,7 @@ t-nfa:    nfa-t.o    cclass.o bitset.o nfa.o nfa-dbg.o
 t-globs:  globs-t.o  cclass.o bitset.o nfa.o str.o globs.o nfa-dbg.o
 t-vector: vector-t.o
 t-expand: expand-t.o str.o dict.o atom.o macro.o parser.o scope.o expand.o
-t-match:  match-t.o  cclass.o bitset.o nfa.o str.o globs.o match.o
+t-match:  match-t.o  cclass.o bitset.o nfa.o str.o globs.o match.o nfa-dbg.o
 $(TESTS):
 	$(LINK.c) -o $@ $^
 
