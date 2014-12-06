@@ -54,7 +54,7 @@ str_xcatsn(str **str_ret, const char *data, unsigned len)
 {
 	str *str;
 	struct str_seg *seg;
-	
+
 	if (len == 0) {
 		return str_ret;
 	}

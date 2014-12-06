@@ -87,15 +87,15 @@ cclass_add(cclass *cc, unsigned lo, unsigned hi)
 {
 	unsigned i;
 
-	if (lo >= hi) 
+	if (lo >= hi)
 		return;
 
-	/* skip all the intervals distinctly less than the new, 
+	/* skip all the intervals distinctly less than the new,
 	 * [i.lo,i.hi) << [lo,hi) */
 	i = 0;
 	while (i < cc->nintervals && cc->interval[i].hi < lo)
 		++i;
-	/* If at end, or the current interval is dictinctly 
+	/* If at end, or the current interval is dictinctly
 	 * greater than the new, [lo,hi) << [i.lo,i.hi), then we
 	 * immediately insert */
 	if (i == cc->nintervals || hi < cc->interval[i].lo) {
@@ -110,7 +110,7 @@ cclass_add(cclass *cc, unsigned lo, unsigned hi)
 	if (cc->interval[i].hi > hi) {
 		hi = cc->interval[i].hi;
 	}
-	/* Look forward to see if our hi bound will consume the following 
+	/* Look forward to see if our hi bound will consume the following
 	 * interval */
 	while (i + 1 < cc->nintervals && cc->interval[i + 1].lo <= hi) {
 		if (cc->interval[i + 1].hi > hi)
@@ -157,7 +157,7 @@ cclass_eq(const cclass *c1, const cclass *c2)
 	for (i = 0; i < c1->nintervals; i++)
 		if (c1->interval[i].lo != c2->interval[i].lo ||
 		    c1->interval[i].hi != c2->interval[i].hi)
-		    	return 0;
+			return 0;
 	return 1;
 }
 

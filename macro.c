@@ -128,13 +128,13 @@ void
 macro_ltrim(macro **mp)
 {
         macro *m;
-	
+
 	while ((m = *mp)) {
             if (m->type != MACRO_STR)
 	        break;
 	    str_ltrim(&m->str);
 	    if (m->str)
-	    	break;
+		break;
 	    *mp = m->next;
             m->next = 0;
 	    macro_free(m);

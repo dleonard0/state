@@ -29,7 +29,7 @@ static inline unsigned _bitset_nelem(unsigned nbits) {
 
 /* (Allocation size for a bitset structure; overallocated by one word) */
 static inline size_t _bitset_size(unsigned nbits) {
-	return sizeof (struct bitset) 
+	return sizeof (struct bitset)
 	     + sizeof (_bitset_word) * _bitset_nelem(nbits);
 }
 
@@ -65,13 +65,13 @@ void bitset_free(bitset *a);
 
 /** Compares two bitsets */
 static inline int bitset_cmp(const bitset *a, const bitset *b) {
-	return memcmp(a->bits, b->bits, 
+	return memcmp(a->bits, b->bits,
 		_bitset_nelem(a->nbits) * sizeof (_bitset_word));
 }
 
 /** Assigns the content of one bitset into another */
 static inline void bitset_copy(bitset *dst, const bitset *src) {
-	memcpy(dst->bits, src->bits, 
+	memcpy(dst->bits, src->bits,
 		_bitset_nelem(dst->nbits) * sizeof (_bitset_word));
 }
 

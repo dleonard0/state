@@ -19,7 +19,7 @@
 #define GLOBS struct globs * __attribute((__cleanup__(globs_cleanup)))
 static void globs_cleanup(struct globs **g) { globs_free(*g); }
 #define make_globs(...) make_globs_(__FILE__, __LINE__, __VA_ARGS__, NULL)
-static struct globs *make_globs_(const char *file, int lineno, ...) 
+static struct globs *make_globs_(const char *file, int lineno, ...)
 	__attribute__((sentinel));
 
 /* A tree simulates a filesystem tree  */
@@ -31,7 +31,7 @@ static struct tree *make_tree_(const char *file,int lineno,...)
 	__attribute__((sentinel));
 
 /* asserts that the globs applied to the tree match only the names given */
-#define assert_matches(globs, tree, ...) do { 				\
+#define assert_matches(globs, tree, ...) do {				\
 	const char *_expected[] = { __VA_ARGS__, 0 };			\
 	assert_matches_(__FILE__, __LINE__, globs, tree, _expected);	\
     } while (0)
@@ -122,7 +122,7 @@ make_tree_(const char *file, int lineno, ...)
 				      ? (*node)->pathlen
 				      : clen;
 			int cmp = strncmp(c, (*node)->path, minlen);
-			if (cmp < 0) 
+			if (cmp < 0)
 				break;
 			if (cmp == 0 && clen > (*node)->pathlen)
 				break;
@@ -191,14 +191,14 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 	    unsigned plen;
 
 	    while (*p == '/')
-	    	p++;
+		p++;
 	    if (!*p)
-	    	break;
+		break;
 	    for (plen = 0; p[plen]; plen++)
-	    	if (p[plen] == '/')
+		if (p[plen] == '/')
 			break;
 	    for (; node; node = node->sibling)
-	    	if (node->pathlen == plen && strncmp(node->path, p, plen) == 0)
+		if (node->pathlen == plen && strncmp(node->path, p, plen) == 0)
 			break;
 	    assert(node); // abort if called with a deferred we never gen'd
 	    node = node->child;
@@ -206,7 +206,7 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 	}
 	for (; node; node = node->sibling) {
 		str *mstr, **x;
-		x = str_xcatsn(str_xcat(&mstr, prefix), 
+		x = str_xcatsn(str_xcat(&mstr, prefix),
 				node->path, node->pathlen);
 		if (node->child) {
 			x = str_xcats(x, "/");
@@ -285,7 +285,7 @@ assert_matches_(const char *file, int lineno,
 	} *exp = malloc(nexpected * sizeof *exp);
 
 	for (i = 0; i < nexpected; i++) {
-		/* if the expected string ends with "=N" then 
+		/* if the expected string ends with "=N" then
 		 * use "N" as the expected reference to strcmp */
 		unsigned len = strlen(expected[i]);
 		exp[i].exp = expected[i];
@@ -342,7 +342,7 @@ assert_matches_(const char *file, int lineno,
 					error = 1;
 					break;
 				}
-				if (exp[i].ref && 
+				if (exp[i].ref &&
 				    strcmp(exp[i].ref, (const char *)ref) != 0)
 				{
 					fprintf(stderr, "%s:%d: "

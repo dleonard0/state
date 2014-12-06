@@ -45,7 +45,7 @@ matcher_new(const struct globs *globs,
 	m->stri = stri_str(0);
 	m->flags = MATCH_DEFERRED;
 	m->state = 0;
-	
+
 	matcher = malloc(sizeof *matcher);
 	matcher->globs = globs;
 	matcher->generator = generator;
@@ -107,7 +107,7 @@ matcher_next(struct matcher *matcher, const void **ref_return)
 				*mp = head;
 				match_free(m);
 			} else {
-				/* Found a real, exhausted string. 
+				/* Found a real, exhausted string.
 				 * First, remove it from the list */
 				*mp = m->next;
 
@@ -115,7 +115,7 @@ matcher_next(struct matcher *matcher, const void **ref_return)
 				const void *ref = globs_is_accept_state(
 					matcher->globs, m->state);
 				if (ref) {
-					/* It's real. 
+					/* It's real.
 					 * Steal the match.str before freeing */
 					str *result = m->str;
 					m->str = 0;

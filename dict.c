@@ -50,7 +50,7 @@ dict_new(void (*free_value)(void *),
 		key_cmp = default_cmp;
 	if (!key_hash)
 		key_hash = default_hash;
-	
+
 	dict = malloc(sizeof *dict);
 	dict->count = 0;
 	dict->free_value = free_value;

@@ -12,29 +12,29 @@
  * Declare with:
  *   VECTOR_OF(int) vi = VECTOR_INIT;
  *   vector_append(vi, 2);
- *   vector_at(vi, 0) = 1; 
+ *   vector_at(vi, 0) = 1;
  *   vector_free(&vi);
  *
  * An auto-freeing vector:
  *   AUTO_VECTOR_OF(int, vi);
  */
 
-#define VECTOR_OF(T) 				\
-	struct { 				\
+#define VECTOR_OF(T)				\
+	struct {				\
 		T *elem;			\
 		unsigned len, capacity;		\
 	}
 
 #define VECTOR_INIT	{ 0, 0, 0 }
 
-#define AUTO_VECTOR_OF(T, var)	 		\
-	VECTOR_OF(T) 				\
-	var 					\
+#define AUTO_VECTOR_OF(T, var)			\
+	VECTOR_OF(T)				\
+	var					\
 	__attribute__((cleanup(vector_free)))	\
 	= VECTOR_INIT
 
 /* pointer type */
-#define _vector_T(v) 		typeof((v).elem[0])
+#define _vector_T(v)		typeof((v).elem[0])
 
 /*
  * Sets the length of a vector, increasing capacity
@@ -77,8 +77,8 @@ _vector_set_len(void *vp, size_t elemsz, unsigned newlen)
 /* Copies src onto end of dst */
 #define vector_concat(dst, src) do {					\
 	unsigned _pos = (dst).len;					\
-	_vector_set_len(&(dst), sizeof *(dst).elem, 			\
-					_pos + (src).len); 		\
+	_vector_set_len(&(dst), sizeof *(dst).elem,			\
+					_pos + (src).len);		\
 	if ((src).len) {						\
 		(dst).elem[_pos] = (src).elem[0];			\
 		memcpy(&(dst).elem[_pos + 1], &(src).elem[1],		\
@@ -96,13 +96,13 @@ vector_free(void *vp)
 }
 
 #define vector_qsort(vec, cmp) do {					\
-        int (*_cmp)(const _vector_T(vec) *, 				\
+        int (*_cmp)(const _vector_T(vec) *,				\
 		    const _vector_T(vec) *) = (cmp);			\
-	qsort((vec).elem, (vec).len, sizeof (vec).elem[0], 		\
+	qsort((vec).elem, (vec).len, sizeof (vec).elem[0],		\
 		(int(*)(const void *, const void *))_cmp);		\
     } while (0)
 
-#define vector_bsearch(vec, key, cmp) 					\
+#define vector_bsearch(vec, key, cmp)					\
 	(_vector_T(vec) *)						\
 	bsearch(key, (vec).elem, (vec).len, sizeof (vec).elem[0], cmp)
 

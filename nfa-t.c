@@ -26,12 +26,12 @@ struct subnfa {
  * naively turns this into an NFA.
  *
  * E ::= F
- * F ::= S  
+ * F ::= S
  *   |   F '|' S
- * S ::= empty 
+ * S ::= empty
  *   |   S T
  * T ::= A '?' | A '*' | A
- * A ::= '[' ( char | char '-' char )* ']' 
+ * A ::= '[' ( char | char '-' char )* ']'
  *   |   '.'
  *   |   char
  *   |   '(' E ')'
@@ -47,14 +47,14 @@ parse_atom(struct nfa *nfa, const char **sp)
 	cclass *cc = NULL;
 	char ch;
 	struct transition *t;
-	
+
 	ch = *(*sp)++;
 	if (ch == '(') {
 		ret = parse_exp(nfa, sp);
 		ch = *(*sp)++;
 		assert(ch == ')');
 		return ret;
-	} 
+	}
 
 	cc = cclass_new();
 	if (ch == '[') {
@@ -245,7 +245,7 @@ dfa_matches(const struct nfa *dfa, const char *str)
 	return 1;
 }
 
-/* Tests if an environment variable is set, non-empty and doesn't start 
+/* Tests if an environment variable is set, non-empty and doesn't start
  * with either '0' or 'n'. */
 static int
 testenv(const char *e)
@@ -256,22 +256,22 @@ testenv(const char *e)
 
 /* Dump a graph, showing line number (only used in debugging) */
 #define DUMP(dfa) do {					\
-	if (Debug) { 					\
-		printf("%s:%u: %s =\n", 		\
+	if (Debug) {					\
+		printf("%s:%u: %s =\n",			\
 			__FILE__, __LINE__, #dfa);	\
 		nfa_dump(stdout, dfa, -1);		\
 	}						\
     } while (0)
 
-/* 
+/*
  * MAKE_DFA(dfa, re) is the same as:
- *    dfa = nfa_dfa(make_nfa(re)) 
+ *    dfa = nfa_dfa(make_nfa(re))
  * but with more verbosity.
  */
 #define MAKE_DFA(dfa, re) do {				\
 		struct nfa *nfa;			\
 		const char *_re = re;			\
-		dprintf("\n%s:%u: make: /%s/\n", 	\
+		dprintf("\n%s:%u: make: /%s/\n",	\
 			__FILE__,__LINE__,_re);		\
 		nfa = make_nfa(_re);			\
 		DUMP(nfa);				\

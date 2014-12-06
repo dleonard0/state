@@ -243,7 +243,6 @@ expect_eol(struct parser *p)
 		next(p);
 	}
 	return allblank || comment;
-	
 }
 
 /*------------------------------------------------------------
@@ -611,7 +610,7 @@ parse_one(struct parser *p)
 		}
 
 		maybe_end_rule(p);
-		
+
 		if (enabled && p->cb->directive) {
 			p->cb->directive(p, ident, text);
 		} else {

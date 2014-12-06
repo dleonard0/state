@@ -231,7 +231,7 @@ static inline stri stri_str(const str *s) {
 }
 
 /**
- * Tests if the string iterator points to a character, and/or 
+ * Tests if the string iterator points to a character, and/or
  * can be incremented.
  * Complexity O(1).
  *
@@ -292,7 +292,7 @@ static inline void stri_inc_by(stri *iptr, unsigned inc) {
  * Accesses the character referred to by an iterator.
  * Complexity O(1).
  * @param i  string iterator value, for which #stri_more() returns true
- * @return the character under the iterator, or @c NUL if the iterator 
+ * @return the character under the iterator, or @c NUL if the iterator
  *         is invalid.
  */
 static inline char stri_at(const stri i) {

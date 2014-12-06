@@ -25,13 +25,13 @@ struct scope {
 /**
  * Allocates a new variable scope.
  * @param outer   the outer scope that scope_get() will search.
- * @param freefn  a function applied to put values 
+ * @param freefn  a function applied to put values
  *                during #scope_free()
  * @return a new scope that must be released with #scope_free().
  */
 struct scope *scope_new(struct scope *outer, void (*freefn)(void *));
 
-/** 
+/**
  * Looks up a variable in the scope.
  * @param scope   the variable scope
  * @param varname the name of the variable
@@ -47,7 +47,7 @@ void *scope_get(const struct scope *scope, const char * /*atom*/ varname);
  *                ownership of the value, and free it when the
  *		  scope is freed.
  */
-void scope_put(struct scope *scope, const char * /*atom*/ varname, 
+void scope_put(struct scope *scope, const char * /*atom*/ varname,
 		void *value);
 
 /**

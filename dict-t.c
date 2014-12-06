@@ -10,7 +10,6 @@ inc_counter(void *value)
 
 int
 main(void) {
-	
 	void *A = "A";
 	void *B = "B";
 	void *C = "C";
@@ -56,13 +55,13 @@ main(void) {
 		for (i = 0; i < 3; ++i) {
 		    assert(dict_iter_next(di, &k, &v));
 		    if (k == A) {
-		    	r *= 2;
+			r *= 2;
 			assert(v == B);
 		    } else if (k == B) {
-		    	r *= 3;
+			r *= 3;
 			assert(v == C);
 		    } else {
-		    	assert(k == C);
+			assert(k == C);
 			r *= 5;
 			assert(v == A);
 		    }

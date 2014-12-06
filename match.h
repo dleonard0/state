@@ -13,7 +13,7 @@
  * Conceptually, the generators provide a lazily evaluated string set,
  * and the matcher is an incremental rejection algorithm.
  *
- * For example, to match the pattern 'h*.txt' against files in the 
+ * For example, to match the pattern 'h*.txt' against files in the
  * current working directory, a generator could produce the initial
  * list of files from the current directory, plus 'deferreds' for the
  * subdirectories (and the root directory). The generated set could be:
@@ -82,7 +82,7 @@
 
 struct globs;
 
-/** 
+/**
  * A match is a partially-matched candidate string.
  * These structures are allocated by the generator callback implementation.
  */
@@ -90,7 +90,7 @@ struct match {
 	struct match *next;
 	str *str;		/* candidate string (owned) */
 	unsigned flags;
-#define MATCH_DEFERRED	1 	/* flags: generator can yield more strings */
+#define MATCH_DEFERRED	1	/* flags: generator can yield more strings */
 	stri stri;		/* position of next character to match */
 	unsigned state;		/* current match state */
 };
@@ -119,7 +119,7 @@ struct generator {
 	 * The function should allocate #match structures with #match_new(),
 	 * chain them via their #match.next fields, and insert them
 	 * into the list indicated by the @a mp parameter.
-	 * 
+	 *
 	 * Each returned match must have a #match.str field that is:
 	 *   1. longer then @a prefix
 	 *   2. starts with the same characters as @a prefix
@@ -142,9 +142,9 @@ struct generator {
 	 * @param gcontext The generator context argument given to
 	 *                #matcher_new().
 	 * @return address of last #match.next field or @a mp
-	 */ 
-	struct match ** (*generate)(struct match **mp, 
-				    const str *prefix, 
+	 */
+	struct match ** (*generate)(struct match **mp,
+				    const str *prefix,
 				    void *gcontext);
 	/**
 	 * Releases the context pointer passed to #matcher_new().
@@ -157,7 +157,7 @@ struct generator {
 };
 
 
-/* 
+/*
  * A matcher coordinates generators and globs, allowing incremental
  * searching of a generated string space against a globset.
  */
@@ -174,7 +174,7 @@ struct matcher *matcher_new(const struct globs *globs,
 			    const struct generator *generator,
 			    void *gcontext);
 
-/** 
+/**
  * Searches the generated string space to find the string that matches
  * a pattern from the globset.
  * @param ref_return  Optional pointer to storage where to

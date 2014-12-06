@@ -6,7 +6,7 @@
 #include "parser.h"
 
 /*
- * This is a capturing context. The plan is to run the 
+ * This is a capturing context. The plan is to run the
  * parser, and to save its callbacks as text into the result[] array.
  * Then, we compare an expected string against the output result[].
  * What follows are callback functions that append to the result[] array.
@@ -65,7 +65,7 @@ cb_putm(struct cb_context *context, const macro *m)
 			    char sep = 0;
 			    struct macro_list *l = m->reference;
 			    while (l) {
-			    	if (sep == 0) sep = ' ';
+				if (sep == 0) sep = ' ';
 				else { cb_putc(context, sep); sep = ','; }
 				cb_putm(context, l->macro);
 				l = l->next;
@@ -120,11 +120,11 @@ cb_define(struct parser *p, macro *lhs, int defkind, macro *text)
 	cb_puts(context, "DEFINE ");
 	cb_putm(context, lhs);
 	switch (defkind) {
-	case DEFKIND_DELAYED: 	cb_puts(context, " = "); break;
+	case DEFKIND_DELAYED:	cb_puts(context, " = "); break;
 	case DEFKIND_IMMEDIATE:	cb_puts(context, " := "); break;
 	case DEFKIND_WEAK:	cb_puts(context, " ?= "); break;
 	case DEFKIND_APPEND:	cb_puts(context, " += "); break;
-	default:            	cb_puts(context, " <UNKNOWN>= "); break;
+	default:		cb_puts(context, " <UNKNOWN>= "); break;
 	}
 	cb_putm(context, text);
 	cb_putc(context, '\n');
@@ -152,7 +152,7 @@ cb_condition(struct parser *p, int condkind, macro *t1, macro *t2)
 {
 	struct cb_context *context = parser_get_context(p);
 	switch (condkind) {
-	case CONDKIND_IFDEF: 
+	case CONDKIND_IFDEF:
 		cb_puts(context, "IFDEF ");
 		cb_putm(context, t1);
 		cb_putc(context, '\n');
@@ -265,7 +265,7 @@ fprint_str(FILE *f, const char *str)
 
 	    if (ch == '\t') {
 		fputs("\033[32m\u2409", f);
-	    	if ((col & 7) != 7) putc('\t', f);
+		if ((col & 7) != 7) putc('\t', f);
 	    } else {
 	        putc(ch, f);
 	    }
@@ -277,7 +277,7 @@ fprint_str(FILE *f, const char *str)
 	    } else if (ch == '\t') {
 	        col = (col + 8) & ~7;
 	    } else {
-	    	col++;
+		col++;
 	    }
 	}
 	if (col)

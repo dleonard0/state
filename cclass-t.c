@@ -17,11 +17,11 @@ ch_tostr(char *p, unsigned ch)
 	else if (ch == '\n') { *p++ = '\\'; *p++ = 'n'; }
 	else if (ch == '\r') { *p++ = '\\'; *p++ = 'r'; }
 	else if (ch == '\t') { *p++ = '\\'; *p++ = 't'; }
-	else if (ch < 0x20)  { *p++ = '\\'; *p++ = 'x'; 
+	else if (ch < 0x20)  { *p++ = '\\'; *p++ = 'x';
 			       *p++ = hex[(ch >> 4) & 0xf];
 			       *p++ = hex[(ch >> 0) & 0xf]; }
 	else if (ch < 0x7f)  { *p++ = ch; }
-	else if (ch <=0xffff){ *p++ = '\\'; *p++ = 'u'; 
+	else if (ch <=0xffff){ *p++ = '\\'; *p++ = 'u';
 			       *p++ = hex[(ch >> 12) & 0xf];
 			       *p++ = hex[(ch >>  8) & 0xf];
 			       *p++ = hex[(ch >>  4) & 0xf];
@@ -53,10 +53,10 @@ cclass_tostr(const cclass *cc)
 	    unsigned hi = cc->interval[i].hi;
 	    assert(p < &buf[sizeof buf - sizeof "\\u+000000-\\u+000000]"]);
 	    if (i && lasthi >= lo) {
-	    	memcpy(p, "*OVERLAP*", 9); p += 9;
+		memcpy(p, "*OVERLAP*", 9); p += 9;
 	    }
 	    p = ch_tostr(p, lo);
-	    if (hi > lo + 2) *p++ = '-'; 
+	    if (hi > lo + 2) *p++ = '-';
 	    if (hi != MAXCHAR && hi > lo + 1) p = ch_tostr(p, hi - 1);
 	    lasthi = hi;
 	}

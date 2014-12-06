@@ -73,7 +73,7 @@ nfa_new_trans(struct nfa *nfa, unsigned from, unsigned to)
 	struct node *n = &nfa->nodes[from];
 	struct transition *trans;
 	if (n->ntrans % TRANSINC == 0) {
-		n->trans = realloc(n->trans, 
+		n->trans = realloc(n->trans,
 			(n->ntrans + TRANSINC) * sizeof *n->trans);
 	}
 	trans = &n->trans[n->ntrans++];
@@ -106,7 +106,7 @@ transition_is_epsilon(const struct transition *t)
 	return !t->cclass;
 }
 
-/* 
+/*
  * Compute the epsilon-closure of the set s.
  * That's all the states reachable through zero or more epsilon transitions
  * in nfa from any of the states in s.
@@ -169,9 +169,9 @@ equiv_get(struct equiv *equiv, unsigned i)
 	if (equiv->avail <= i) {
 		unsigned oldavail = equiv->avail;
 		while (equiv->avail <= i) equiv->avail += 32;
-		equiv->set = realloc(equiv->set, 
+		equiv->set = realloc(equiv->set,
 			equiv->avail * sizeof *equiv->set);
-		memset(equiv->set + oldavail, 0, 
+		memset(equiv->set + oldavail, 0,
 			(equiv->avail - oldavail) * sizeof *equiv->set);
 	}
 	if (!equiv->set[i]) {
@@ -352,8 +352,8 @@ make_dfa(struct nfa *dfa, const struct nfa *nfa)
 
 		/* We want to combine all the transition cclasses
 		 * of src together, and then efficiently walk over
-		 * their members. 
-		 * The breaks list speeds this up because if 
+		 * their members.
+		 * The breaks list speeds this up because if
 		 * characters c1,c2 appear adjacent in the breaks list,
 		 * then we can reason that for any cclass in any src
 		 * transitions, either:

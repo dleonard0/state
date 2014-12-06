@@ -72,7 +72,7 @@ bitset_count(const bitset *s)
 {
 	unsigned count, i;
 
-	for (count = i = 0; i < _bitset_nelem(s->nbits); ++i) 
+	for (count = i = 0; i < _bitset_nelem(s->nbits); ++i)
 		count += count_el(s, i);
 	return count;
 }

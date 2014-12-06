@@ -20,10 +20,10 @@ typedef struct cclass {
 } cclass;
 
 cclass * cclass_new(void);
-void 	 cclass_free(cclass *cc);
+void	 cclass_free(cclass *cc);
 cclass * cclass_dup(const cclass *cc);
-int 	 cclass_is_single(const cclass *cc);
-int 	 cclass_is_empty(const cclass *cc);
+int	 cclass_is_single(const cclass *cc);
+int	 cclass_is_empty(const cclass *cc);
 
 /** Adds interval [lo,hi) into the cclass. */
 void 	 cclass_add(cclass *cc, unsigned lo, unsigned hi);

@@ -41,11 +41,11 @@ void		nfa_fini(struct nfa *nfa);
 struct nfa *	nfa_new(void);
 
 /** Releases all store associated with the graph structure */
-void 		nfa_free(struct nfa *nfa);
+void		nfa_free(struct nfa *nfa);
 
-/** Adds a new, empty node to the graph. 
+/** Adds a new, empty node to the graph.
  * @returns the new node's index into @c{g->nodes[]}. */
-unsigned 	nfa_new_node(struct nfa *nfa);
+unsigned	nfa_new_node(struct nfa *nfa);
 
 /**
  * Appends a pointer value to a node's #node.finals array.
@@ -63,7 +63,7 @@ void		nfa_add_final(struct nfa *nfa, unsigned n, const void *final);
  * Adds an epsilon transition to the graph.
  * An epsilon transition in a NFA means that the machine may
  * take the transition at any time.
- * Normaly though, the caller can immediately convert the 
+ * Normaly though, the caller can immediately convert the
  * transition into a non-epsilon by setting the #transition.cclass
  * field to a non-null pointer.
  *

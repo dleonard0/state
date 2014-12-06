@@ -103,7 +103,7 @@ mm_error(struct parser *p, unsigned lineno, unsigned u8col, const char *msg)
 				hilite = 1;
 				fprintf(stderr, "\033[90m");
 			}
-			putc(ch == '\n' ? '$' : 
+			putc(ch == '\n' ? '$' :
 			     ch == '\t' ? '>' :
 			     ch, stderr);
 			if (hilite) {
@@ -126,9 +126,9 @@ mm_error(struct parser *p, unsigned lineno, unsigned u8col, const char *msg)
 static void
 print_char(FILE *f, int ch)
 {
-	if (ch == '\n') 
+	if (ch == '\n')
 		fprintf(f, "\\n");
-	else if (ch == '\\' || ch == '\'' || 
+	else if (ch == '\\' || ch == '\'' ||
 		 ch == '$' || ch == ')' || ch == ',')
 		fprintf(f, "\\%c", ch);
 	else if (ch < ' ')
@@ -195,7 +195,7 @@ print_macro(FILE *f, macro *m)
 #define assert_expands(text, expected, ...) \
 	assert_expands_(__FILE__, __LINE__, expected, text, "" __VA_ARGS__)
 static void
-assert_expands_(const char *file, int lineno, 
+assert_expands_(const char *file, int lineno,
 	const char *expected, const char *text, const char *defines)
 {
 	struct parser_cb cb = {
@@ -266,7 +266,7 @@ main()
 	assert_expands("a$($(X))c", "abc", "X = Y\nY = b");
 
 	/* subst */
-	assert_expands("a$(subst fofobar,M,$(X))c", 	"afofofoMc", 
+	assert_expands("a$(subst fofobar,M,$(X))c",	"afofofoMc",
 		       "X = fofofofofobar");
 	assert_expands("a$(subst ,b,x)c",		"axbc");
 	return 0;

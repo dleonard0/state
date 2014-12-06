@@ -52,7 +52,7 @@ int dict_put(struct dict *dict, const void *key, void *value);
  * @param dict   the dictionary to query
  * @param key    the immutable key to look up; only the pointer value is used
  * @return a pointer to the mutable value, or @c NULL if no pair in the
- * dictionary has the requested @a key. 
+ * dictionary has the requested @a key.
  * The pointer returned must not be deallocated by the caller.
  */
 void *dict_get(const struct dict *dict, const void *key);

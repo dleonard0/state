@@ -26,7 +26,7 @@ macro_to_s(const macro *m, char *buf)
 				*buf++ = *a++;
 			break;
 		case MACRO_STR:
-			for (i = stri_str(m->str); 
+			for (i = stri_str(m->str);
 				stri_more(i); stri_inc(i))
 			{
 				char ch = stri_at(i);
@@ -83,7 +83,7 @@ main(void)
 		macro **acc;
 
 		assert(macro_eq(0, ""));
-		
+
 		acc = &m;
 		acc = macro_cons(acc, macro_new_atom(atom_s("xyz")));
 		assert(macro_eq(m, "xyz"));

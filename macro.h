@@ -15,7 +15,7 @@ struct str;
  *    str       - a shared, literal string (see <str.h>)
  *    reference - a structured reference denoted $(a b,c,...)
  *                but held in memory as the linked-list {a,b,c,...}
- * 
+ *
  * References are represented as $(a b,c,...). Notice that
  * the first and second arguments are separated by whitespace,
  * while the subsequent arguments are separated by a single
@@ -70,7 +70,7 @@ macro *macro_new_reference(void);
  * @param m  the macro to append onto the macro ended by @a mp. This
  *           pointer will be TAKEN by the macro
  * @return pointer to the (new) last macro#next pointer in the macro.
- *         The entire resulting macro must eventually be released 
+ *         The entire resulting macro must eventually be released
  *         using #macro_free().
  */
 macro **macro_cons(macro **mp, macro *m);
@@ -87,7 +87,7 @@ void   macro_free(macro *macro);
  * @return pointer to last last macro_list#next pointer in the macro_list
  *         chain after appending @a m.
  *         It will always dereference to @c NULL.
- *         The entire resulting macro must eventually be released 
+ *         The entire resulting macro must eventually be released
  *         using #macro_list_free().
  */
 struct macro_list **macro_list_cons(struct macro_list **lp, macro *m);

@@ -27,7 +27,7 @@ scope_get(const struct scope *scope, const char * /*atom*/ varname)
 }
 
 void
-scope_put(struct scope *scope, const char * /*atom*/ varname, 
+scope_put(struct scope *scope, const char * /*atom*/ varname,
 	  void *value)
 {
 	dict_put(scope->dict, varname, value);
@@ -37,7 +37,7 @@ struct scope *
 scope_free(struct scope *scope)
 {
 	struct scope *outer;
-	
+
 	outer = scope->outer;
 	dict_free(scope->dict);
 	free(scope);

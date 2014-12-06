@@ -18,7 +18,7 @@ struct globs;
  *
  * Glob expressions are best known by their use in the standard
  * Unix shell.
- * This one implements a subset of POSIX extended globs. A glob 
+ * This one implements a subset of POSIX extended globs. A glob
  * expression is a sequence of zero or more of the following:
  *
  *      Sub-Pattern...          Matches...
@@ -53,7 +53,7 @@ struct str; /* forward decl */
  *                    glob expression. (NOT TAKEN) (See above)
  * @param ref         The pointer that will be returned
  *                    by #globs_is_accept()
- * @return @c NULL on success, 
+ * @return @c NULL on success,
  *         otherwise an error message
  */
 const char *globs_add(struct globs *globs,

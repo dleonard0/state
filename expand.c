@@ -57,7 +57,7 @@ func_subst(str **x, unsigned argc, const str **args, const struct scope *scope)
 	return str_xcatr(x, out_start, out_end);
 }
 
-typedef str **(*func_t)(str **x, unsigned argc, const str **args, 
+typedef str **(*func_t)(str **x, unsigned argc, const str **args,
 			const struct scope *scope);
 
 static struct dict *Func_dict;
@@ -72,9 +72,9 @@ find_func(atom name)
 {
 	if (!Func_dict) {
 		struct dict *dict = dict_new(0, 0, 0);
-#               define add_func(name, func) do { 			\
-		    func_t const _f = (func); /* typecheck */ 		\
-		    dict_put(dict, atom_s(name), _f); 			\
+#               define add_func(name, func) do {			\
+		    func_t const _f = (func); /* typecheck */		\
+		    dict_put(dict, atom_s(name), _f);			\
 		} while (0)
 
 		add_func("subst", func_subst);
@@ -119,7 +119,7 @@ expand_macro(str **x, const macro *macro, const struct scope *scope)
 				unsigned argc;
 
 				/* count the number of references */
-				for (ml = macro->reference, argc = 0; 
+				for (ml = macro->reference, argc = 0;
 				     ml; ml = ml->next)
 				{
 					++argc;
@@ -135,8 +135,8 @@ expand_macro(str **x, const macro *macro, const struct scope *scope)
 					      sizeof *args);
 
 				/* recurively expand available args to strs */
-				for (ml = macro->reference, argc = 0; 
-				     ml; ml = ml->next) 
+				for (ml = macro->reference, argc = 0;
+				     ml; ml = ml->next)
 				{
 					str **ax = &args[argc++];
 					ax = expand_macro(ax, ml->macro, scope);
@@ -146,7 +146,7 @@ expand_macro(str **x, const macro *macro, const struct scope *scope)
 				/* convert first arg to an atom */
 				atom arg0 = atom_from_str(args[0]);
 
-				x = expand_apply(x, arg0, argc, 
+				x = expand_apply(x, arg0, argc,
 					(const str **)args, scope);
 
 				/* We deallocate the strings */

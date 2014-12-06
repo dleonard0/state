@@ -20,7 +20,7 @@
 
 /* Values of 'condkind' in the condition() callback */
 #define CONDKIND_IFDEF		'd'
-#define CONDKIND_IFEQ   	'='
+#define CONDKIND_IFEQ	  	'='
 
 /**
  * The parser context is provided during the #parse() call
@@ -70,7 +70,7 @@ struct parser_cb {
 	 * Default behaviour: macro_free(text)
 	 */
 	void (*directive)(struct parser *p, atom ident, macro *text);
-	
+
 	/**
 	 * Called by the parser to evaluate an 'if' conditional.
 	 * This request may be made at any time.

@@ -64,7 +64,7 @@ subnfa_frame(struct nfa *nfa)
 
 /*
  * Builds a subnfa with the inner subnfa simply linked.
- * This is a helper function for constructing more 
+ * This is a helper function for constructing more
  * complicated subnfas.
  *
  *    ┌───────────────┐
@@ -101,7 +101,7 @@ static struct subnfa parse_sequence(struct nfa *nfa, stri *i);
  *    │   └─────┘    │
  *    └──────────────┘
  * Then the alt is wrapped in + * ? (@ means no change)
- *    ┌─────────────┐  ┌─────────────┐ 
+ *    ┌─────────────┐  ┌─────────────┐
  *    │+            │  │*            │  ┌─────────────┐
  *    │  ┌───ε───┐  │  │  ┌───ε───┐  │  │?            │
  *    │  ↓┌─────┐│  │  │  ↓┌─────┐│  │  │   ┌─────┐   │
@@ -172,7 +172,7 @@ parse_cclass(struct nfa *nfa, stri *i)
 	trans = nfa_new_trans(nfa, sub.entry, sub.exit);
 	trans->cclass = cc;
 
-	if (stri_more(*i) && 
+	if (stri_more(*i) &&
 	    (stri_at(*i) == '!' || stri_at(*i) == '^'))
 	{
 		invert = 1;
@@ -362,7 +362,7 @@ globs_step(const struct globs *globs, unsigned ch, unsigned *statep)
         unsigned j;
 
         /* TODO replace this with a binary search, because the
-         * transition array of a dfa node will be ordered by 
+         * transition array of a dfa node will be ordered by
          * their (non-overlapping) cclass fields */
         for (j = 0; j < node->ntrans; ++j) {
                 const struct transition *trans = &node->trans[j];

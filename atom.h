@@ -10,7 +10,7 @@ typedef const char *atom;
 
 struct str;
 
-/** 
+/**
  * Returns the atom associated with the C string.
  * The empty strings map to the "" atom.
  * The NULL string pointer maps to the NULL atom.

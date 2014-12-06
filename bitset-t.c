@@ -54,9 +54,9 @@ int main()
 		for (i = 0; i < 33; i++)
 			if (i == 7 || i == 8 || i == 15 || i == 16 ||
 			    i == 31 || i == 32)
-			    	assert(bitset_contains(a, i));
+				assert(bitset_contains(a, i));
 			else
-			    	assert(!bitset_contains(a, i));
+				assert(!bitset_contains(a, i));
 
 		assert(bitset_count(a) == 6);
 

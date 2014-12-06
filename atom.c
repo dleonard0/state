@@ -46,7 +46,7 @@ atom_dict()
 {
 	if (!atom_global_dict) {
 		atom_global_dict = dict_new(
-			(void(*)(void *))str_seg_release, 
+			(void(*)(void *))str_seg_release,
 			(int(*)(const void *, const void *))strcmp,
 			(unsigned(*)(const void *))strhash
 		);
@@ -95,7 +95,7 @@ atom_s(const char *s)
 	if (!*s) {
 		return empty_atom;
 	}
-	
+
 	dict = atom_dict();
 	seg = dict_get(dict, s);
 	if (!seg) {
@@ -118,7 +118,7 @@ atom_xstr(struct str **ret, atom a)
 	if (!a || !*a) {
 		return ret;
 	}
-	
+
 	dict = atom_dict();
 	seg = dict_get(dict, a);
 	dummy.seg = seg;
