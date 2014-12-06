@@ -9,14 +9,65 @@ static void
 putc_escaped(unsigned ch, FILE *file) {
 	if (ch == '\\' || ch == '-' || ch == ']')
 		putc('\\', file);
-	if (ch < ' ')
+	if (ch == '\0')
+		fprintf(file, "\\0");
+	else if (ch < ' ')
 		fprintf(file, "\\x%02x", ch);
 	else if (ch < 0x7f)
 		putc(ch & 0x7f, file);
 	else if (ch < 0x10000)
 		fprintf(file, "\\u%04x", ch);
-	else 
+	else
 		fprintf(file, "\\u+%06x", ch);
+}
+
+static void
+cclass_dump(FILE *file, const cclass *cc)
+{
+
+	if (!cc) {
+		fprintf(file, EPSILON_STR);
+	} else {
+		if (cc->nintervals == 1 &&
+		    cc->interval[0].lo + 1 ==
+				cc->interval[0].hi)
+		{
+			unsigned ch = cc->interval[0].lo;
+			if (ch == '.' || ch == '|' ||
+			    ch == '(' || ch == ')' ||
+			    ch == '*' || ch == '?' ||
+			    ch == '[')
+			{
+				putc('\\', file);
+			}
+			putc_escaped(ch, file);
+		} else {
+			unsigned i;
+			cclass *invcc = 0;
+			int inverted = cclass_contains_ch(cc, MAXCHAR-1);
+			if (inverted) {
+				invcc = cclass_dup(cc);
+				cclass_invert(invcc);
+				cc = invcc;
+			}
+			putc('[', file);
+			if (inverted)
+				putc('!', file);
+			for (i = 0; i < cc->nintervals; ++i) {
+				unsigned lo, hi;
+				lo = cc->interval[i].lo;
+				hi = cc->interval[i].hi;
+				putc_escaped(lo, file);
+				if (lo + 1 < hi) {
+					putc('-', file);
+					putc_escaped(hi - 1, file);
+				}
+			}
+			putc(']', file);
+			if (invcc)
+				cclass_free(invcc);
+		}
+	}
 }
 
 /*
@@ -26,7 +77,7 @@ putc_escaped(unsigned ch, FILE *file) {
 void
 nfa_dump(FILE *file, const struct nfa *nfa, int current_state)
 {
-	unsigned i, j, k;
+	unsigned i, j;
 	for (i = 0; i < nfa->nnodes; ++i) {
 		const struct node *n = &nfa->nodes[i];
 		fprintf(file, "%c%4u: %c ",
@@ -34,38 +85,7 @@ nfa_dump(FILE *file, const struct nfa *nfa, int current_state)
 		    i, n->nfinals ? 'F' : ' ');
 		for (j = 0; j < n->ntrans; ++j) {
 			const struct transition *t = &n->trans[j];
-			const cclass *cc = t->cclass;
-			if (!cc)
-				fprintf(file, EPSILON_STR);
-			else {
-				if (cc->nintervals == 1 && 
-				    cc->interval[0].lo + 1 == 
-				    		cc->interval[0].hi)
-				{
-					unsigned ch = cc->interval[0].lo;
-					if (ch == '.' || ch == '|' ||
-					    ch == '(' || ch == ')' ||
-					    ch == '*' || ch == '?' ||
-					    ch == '[') 
-					{
-						putc('\\', file);
-					}
-					putc_escaped(ch, file);
-				} else {
-					putc('[', file);
-					for (k = 0; k < cc->nintervals; ++k) {
-						unsigned lo, hi;
-						lo = cc->interval[k].lo;
-						hi = cc->interval[k].hi;
-						putc_escaped(lo, file);
-						if (lo + 1 < hi) {
-							putc('-', file);
-							putc_escaped(hi - 1, file);
-						}
-					}
-					putc(']', file);
-				}
-			}
+			cclass_dump(file, t->cclass);
 			fprintf(file, "->%u ", t->dest);
 		}
 		if (n->nfinals) {
