@@ -44,6 +44,7 @@ matcher_new(const struct globs *globs,
 	m->next = 0;
 	m->stri = stri_str(0);
 	m->flags = MATCH_DEFERRED;
+	m->state = 0;
 	
 	matcher = malloc(sizeof *matcher);
 	matcher->globs = globs;
@@ -59,8 +60,8 @@ matcher_generate(struct matcher *matcher, struct match **mp, struct match *dm)
 {
 	struct match *m, **tail;
 	unsigned len = str_len(dm->str);
-	tail = matcher->generator->generate(mp, dm->str, matcher->gcontext);
 
+	tail = matcher->generator->generate(mp, dm->str, matcher->gcontext);
 	*tail = 0;
 	for (m = *mp; m; m = m->next) {
 		/* Clone the deferred's state into each new match structure */
