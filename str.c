@@ -192,16 +192,23 @@ str_cmp(const str *a, const str *b)
 }
 
 int
-str_eq(const str *a, const char *s)
+str_eqn(const str *a, const char *s, unsigned slen)
 {
 	stri ai = stri_str(a);
-	while (*s && stri_more(ai)) {
+	while (slen && stri_more(ai)) {
 		if (*s != stri_at(ai))
 			return 0;
 		s++;
+		slen--;
 		stri_inc(ai);
 	}
-	return !*s && !stri_more(ai);
+	return !slen && !stri_more(ai);
+}
+
+int
+str_eq(const str *a, const char *s)
+{
+	return str_eqn(a, s, s ? strlen(s) : 0);
 }
 
 str *

@@ -82,6 +82,7 @@ int       str_cmp(const str *a, const str *b);
  * @param cs a NUL-terminated C string
  */
 int       str_eq(const str *s, const char *cs);
+int       str_eqn(const str *s, const char *cs, unsigned cslen);
 
 /**
  * Duplicate a string.
