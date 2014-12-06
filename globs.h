@@ -50,7 +50,7 @@ struct str; /* forward decl */
  *
  * @param globs       The set of patterns to add to
  * @param globstr     A string containing an extended
- *                    glob expression. (See above)
+ *                    glob expression. (NOT TAKEN) (See above)
  * @param ref         The pointer that will be returned
  *                    by #globs_is_accept()
  * @return @c NULL on success, 
