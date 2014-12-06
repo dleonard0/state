@@ -48,14 +48,15 @@ release_seg(struct str_seg *seg)
  * char[] segments. When no string references a segment, the
  * segment can be released.
  */
-str *
-str_newn_(const char *data, unsigned len, const char *file, unsigned lineno)
+
+str **
+str_xcatsn(str **str_ret, const char *data, unsigned len)
 {
 	str *str;
 	struct str_seg *seg;
 	
 	if (len == 0) {
-		return NULL;
+		return str_ret;
 	}
 
 	str = str_alloc();
@@ -64,14 +65,30 @@ str_newn_(const char *data, unsigned len, const char *file, unsigned lineno)
 	seg->refs = 1;
 	str->offset = 0;
 	str->len = len;
-	str->next = NULL;
-	return str;
+	*str_ret = str;
+	return &str->next;
+}
+
+str **
+str_xcats(str **str_ret, const char *data)
+{
+	return str_xcatsn(str_ret, data, data ? strlen(data) : 0);
 }
 
 str *
-str_new_(const char *cstr, const char *file, unsigned lineno)
+str_newn(const char *data, unsigned len)
 {
-	return str_newn_(cstr, strlen(cstr), file, lineno);
+	str *s;
+	*(str_xcatsn(&s, data, len)) = 0;
+	return s;
+}
+
+str *
+str_new(const char *data)
+{
+	str *s;
+	*(str_xcats(&s, data)) = 0;
+	return s;
 }
 
 str **

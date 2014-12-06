@@ -40,8 +40,7 @@ typedef struct str_iter stri;
  * @return a newly allocated STR; must be deallocated with str_free,
  *         or @c NULL if len is zero.
  */
-#define str_newn(data, len) str_newn_(data, len, __FILE__, __LINE__)
-str *	  str_newn_(const char *data, unsigned len, const char *, unsigned);
+str *	  str_newn(const char *data, unsigned len);
 
 /**
  * Allocates a new STR from a C string.
@@ -49,8 +48,7 @@ str *	  str_newn_(const char *data, unsigned len, const char *, unsigned);
  * @return a newly allocated STR; must be deallocated with str_free,
  *         or @c NULL if the C string is empty (but non- @c NULL).
  */
-#define str_new(cstr)       str_new_(cstr, __FILE__, __LINE__)
-str *	  str_new_(const char *cstr,                const char *, unsigned);
+str *	  str_new(const char *cstr);
 
 /**
  * Deallocates a STR.
@@ -107,6 +105,20 @@ str *     str_dup(const str *s);
  *         or @a str_ret if @a s was empty.
  */
 str **    str_xcat(str **str_ret, const str *s);
+
+/**
+ * Duplicates a C string, then attaches it to the
+ * end of a str.
+ * @param str_ret pointer to where to attach the string
+ * @param cs      the C string to duplicate
+ * @param len     length of the C string to duplicate
+ * @return pointer to the (uninitialized) next pointer
+ *         of the str allocated
+ */
+str **    str_xcatsn(str **str_ret, const char *cs, unsigned len);
+
+/* similar to str_xcatsn(x, s, strlen(s)), but NULL-safe */
+str **    str_xcats(str **str_ret, const char *cs);
 
 /**
  * Appends the string segment from @a begin to @a end
