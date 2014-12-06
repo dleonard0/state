@@ -74,6 +74,7 @@ mm_define(struct parser *p, macro *lhs, int defkind, macro *text)
 	assert(lhs && lhs->type == MACRO_STR && !lhs->next);
 
 	scope_put(mm->scope, atom_from_str(lhs->str), text);
+	macro_free(lhs);
 }
 
 static void

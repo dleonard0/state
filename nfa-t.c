@@ -64,7 +64,7 @@ parse_atom(struct nfa *nfa, const char **sp)
 		    lo = *(*sp)++;
 		    if (**sp == '-') {
 			++*sp;
-			if (hi == ']') 
+			if (**sp == ']')
 			    hi = MAXCHAR;
 			else {
 			    if (**sp == '\\') ++*sp;

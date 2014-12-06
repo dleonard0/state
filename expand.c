@@ -61,6 +61,11 @@ typedef str **(*func_t)(str **x, unsigned argc, const str **args,
 			const struct scope *scope);
 
 static struct dict *Func_dict;
+static void
+find_func_atexit()
+{
+	dict_free(Func_dict);
+}
 
 static func_t
 find_func(atom name)
@@ -74,6 +79,7 @@ find_func(atom name)
 
 		add_func("subst", func_subst);
 		Func_dict = dict;
+		atexit(find_func_atexit);
 	}
 	return dict_get(Func_dict, name);
 }

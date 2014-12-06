@@ -179,6 +179,7 @@ main()
 		assert(cclass_contains(cc, 'a', 'b'+1));
 
 		assert(cclass_eqstr(cc, "ab"));
+		cclass_free(cc);
 	}
 	{
 		/* non-single adding and splitting */

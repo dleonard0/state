@@ -128,6 +128,7 @@ cb_define(struct parser *p, macro *lhs, int defkind, macro *text)
 	}
 	cb_putm(context, text);
 	cb_putc(context, '\n');
+	macro_free(lhs);
 	macro_free(text);
 }
 

@@ -746,6 +746,7 @@ parse_one(struct parser *p)
 		skip_sp(p);
 		if (!parse_macro(p, CLOSE_LF | CLOSE_HASH, &text)) {
 			macro_free(text);
+			macro_free(lead);
 			return 0;
 		}
 		maybe_end_rule(p);
