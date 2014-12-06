@@ -27,7 +27,7 @@ $(TESTS):
 
 check: $(TESTS:=.tested)
 %.tested: %
-	@if $(abspath $<); \
+	@if $(RUNTEST) $(abspath $<); \
 	 then printf '%-10s ... PASS\n' $(basename $<); \
 	 else printf '%-10s ... FAIL\n' $(basename $<); exit 1; \
 	 fi
