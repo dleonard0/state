@@ -5,7 +5,7 @@
 #include "cclass.h"
 
 struct globs {
-	struct nfa g;
+	struct nfa dfa;
 };
 
 /*------------------------------------------------------------
@@ -13,7 +13,7 @@ struct globs {
  */
 
 /*
- * An intermediate subnfa generated during Thompson's
+ * An intermediate sub-automaton generated during Thompson's
  * construction method.
  *
  * Implementation note: never return a subnfa with a *backwards*
@@ -27,17 +27,17 @@ struct subnfa {
 	const char *error;
 };
 
-#define IS_ERROR_SUBGRAPH(subg) ((subg).error)
+#define IS_ERROR_SUBNFA(sub) ((sub).error)
 
 /** Returns a pure-error subnfa. */
 static struct subnfa
 subnfa_error(const char *error)
 {
-	struct subnfa sg;
-	sg.entry = 0;
-	sg.exit = 0;
-	sg.error = error;
-	return sg;
+	struct subnfa sub;
+	sub.entry = 0;
+	sub.exit = 0;
+	sub.error = error;
+	return sub;
 }
 
 /*
@@ -53,13 +53,13 @@ subnfa_error(const char *error)
  *    └──────┘
  */
 static struct subnfa
-subnfa_frame(struct nfa *g)
+subnfa_frame(struct nfa *nfa)
 {
-	struct subnfa sg;
-	sg.entry = nfa_new_node(g);
-	sg.exit = nfa_new_node(g);
-	sg.error = 0;
-	return sg;
+	struct subnfa sub;
+	sub.entry = nfa_new_node(nfa);
+	sub.exit = nfa_new_node(nfa);
+	sub.error = 0;
+	return sub;
 }
 
 /*
@@ -75,16 +75,16 @@ subnfa_frame(struct nfa *g)
  *    └───────────────┘
  */
 static struct subnfa
-subnfa_box(struct nfa *g, struct subnfa inner)
+subnfa_box(struct nfa *nfa, struct subnfa inner)
 {
-	struct subnfa box = subnfa_frame(g);
-	nfa_new_trans(g, box.entry, inner.entry);
-	nfa_new_trans(g, inner.exit, box.exit);
+	struct subnfa box = subnfa_frame(nfa);
+	nfa_new_trans(nfa, box.entry, inner.entry);
+	nfa_new_trans(nfa, inner.exit, box.exit);
 	return box;
 }
 
 /* Forward declaration for the globs parser */
-static struct subnfa parse_sequence(struct nfa *g, stri *i);
+static struct subnfa parse_sequence(struct nfa *nfa, stri *i);
 
 /*
  * Parse one of: ?(.|..) *(.|..) +(.|..) @(.|..) !(.|..)
@@ -111,14 +111,14 @@ static struct subnfa parse_sequence(struct nfa *g, stri *i);
  *                     └─────────────┘  └─────────────┘
  */
 static struct subnfa
-parse_group(struct nfa *g, stri *i, unsigned kind)
+parse_group(struct nfa *nfa, stri *i, unsigned kind)
 {
 	if (kind == '!') {
 		return subnfa_error("!(...) is not supported");
 	}
 	stri_inc(*i); /* '(' */
 
-	struct subnfa alt = subnfa_frame(g);
+	struct subnfa alt = subnfa_frame(nfa);
 	int first = 1;
 	while (stri_more(*i) && stri_at(*i) != ')') {
 		if (!first && stri_at(*i) == '|') {
@@ -126,34 +126,34 @@ parse_group(struct nfa *g, stri *i, unsigned kind)
 			if (!stri_more(*i)) break;
 		}
 		first = 0;
-		struct subnfa seq = parse_sequence(g, i);
-		if (IS_ERROR_SUBGRAPH(seq)) {
+		struct subnfa seq = parse_sequence(nfa, i);
+		if (IS_ERROR_SUBNFA(seq)) {
 			return seq;
 		}
-		nfa_new_trans(g, alt.entry, seq.entry);
-		nfa_new_trans(g, seq.exit, alt.exit);
+		nfa_new_trans(nfa, alt.entry, seq.entry);
+		nfa_new_trans(nfa, seq.exit, alt.exit);
 	}
 	if (!stri_more(*i)) {
 		return subnfa_error("unclosed (");
 	}
 	stri_inc(*i); /* ')' */
 
-	if (g->nodes[alt.entry].ntrans == 0) {
+	if (nfa->nodes[alt.entry].ntrans == 0) {
 		/* empty alt, () */
-		nfa_new_trans(g, alt.entry, alt.exit);
+		nfa_new_trans(nfa, alt.entry, alt.exit);
 	}
 
-	struct subnfa ret = subnfa_box(g, alt);
+	struct subnfa ret = subnfa_box(nfa, alt);
 	switch (kind) {
 	case '?':
-		nfa_new_trans(g, ret.entry, ret.exit);
+		nfa_new_trans(nfa, ret.entry, ret.exit);
 		break;
 	case '*':
-		nfa_new_trans(g, ret.entry, ret.exit);
-		nfa_new_trans(g, alt.exit, alt.entry);
+		nfa_new_trans(nfa, ret.entry, ret.exit);
+		nfa_new_trans(nfa, alt.exit, alt.entry);
 		break;
 	case '+':
-		nfa_new_trans(g, alt.exit, alt.entry);
+		nfa_new_trans(nfa, alt.exit, alt.entry);
 		break;
 	case '@':
 		break;
@@ -163,13 +163,13 @@ parse_group(struct nfa *g, stri *i, unsigned kind)
 
 /* Parse a [...] character class; after the '[' has been consumed. */
 static struct subnfa
-parse_cclass(struct nfa *g, stri *i)
+parse_cclass(struct nfa *nfa, stri *i)
 {
-	struct subnfa sg = subnfa_frame(g);
+	struct subnfa sub = subnfa_frame(nfa);
 	cclass *cc = cclass_new();
 	int invert = 0;
 	struct transition *trans;
-	trans = nfa_new_trans(g, sg.entry, sg.exit);
+	trans = nfa_new_trans(nfa, sub.entry, sub.exit);
 	trans->cclass = cc;
 
 	if (stri_more(*i) && 
@@ -225,7 +225,7 @@ parse_cclass(struct nfa *g, stri *i)
 		cclass_free(cc);
 		cc = trans->cclass;
 	}
-	return sg;
+	return sub;
 }
 
 /* Create the cclass corresponding to the globs "?" */
@@ -243,31 +243,31 @@ question_cclass()
  *   [...] * ? \c c
  */
 static struct subnfa
-parse_atom(struct nfa *g, stri *i)
+parse_atom(struct nfa *nfa, stri *i)
 {
 	/* assert(stri_more(*i)); */
-	struct subnfa sg;
+	struct subnfa sub;
 	unsigned ch = stri_utf8_inc(i);
 	cclass *cc;
 
 	if (stri_more(*i) && stri_at(*i) == '(' &&
 		(ch == '?' || ch == '*' || ch == '+' || ch == '@' || ch == '!'))
 	{
-		return parse_group(g, i, ch);
+		return parse_group(nfa, i, ch);
 	}
 	if (stri_more(*i) && ch == '[') {
-		return parse_cclass(g, i);
+		return parse_cclass(nfa, i);
 	}
 	if (ch == '*') {
-		sg = subnfa_frame(g);
-		struct subnfa q = subnfa_frame(g); /* The "?" subnfa */
+		sub = subnfa_frame(nfa);
+		struct subnfa q = subnfa_frame(nfa); /* The "?" subnfa */
 		cc = question_cclass();
-		nfa_new_trans(g, sg.entry, q.entry);
-		nfa_new_trans(g, q.entry, q.exit)->cclass = cc;
-		nfa_new_trans(g, q.exit, sg.exit);
-		nfa_new_trans(g, q.entry, q.exit);
-		nfa_new_trans(g, q.exit, q.entry);
-		return sg;
+		nfa_new_trans(nfa, sub.entry, q.entry);
+		nfa_new_trans(nfa, q.entry, q.exit)->cclass = cc;
+		nfa_new_trans(nfa, q.exit, sub.exit);
+		nfa_new_trans(nfa, q.entry, q.exit);
+		nfa_new_trans(nfa, q.exit, q.entry);
+		return sub;
 	}
 
 	if (ch == '?') {
@@ -279,9 +279,9 @@ parse_atom(struct nfa *g, stri *i)
 		}
 		cclass_add(cc, ch, ch + 1);
 	}
-	sg = subnfa_frame(g);
-	nfa_new_trans(g, sg.entry, sg.exit)->cclass = cc;
-	return sg;
+	sub = subnfa_frame(nfa);
+	nfa_new_trans(nfa, sub.entry, sub.exit)->cclass = cc;
+	return sub;
 }
 
 /*
@@ -295,9 +295,9 @@ parse_atom(struct nfa *g, stri *i)
  *    └──────────────────────────────────────────┘
  */
 static struct subnfa
-parse_sequence(struct nfa *g, stri *i)
+parse_sequence(struct nfa *nfa, stri *i)
 {
-	struct subnfa seq = subnfa_frame(g);
+	struct subnfa seq = subnfa_frame(nfa);
 	unsigned last = seq.entry;
 
 	while (stri_more(*i)) {
@@ -306,14 +306,14 @@ parse_sequence(struct nfa *g, stri *i)
 			break;
 		}
 
-		struct subnfa atom = parse_atom(g, i);
-		if (IS_ERROR_SUBGRAPH(atom)) {
+		struct subnfa atom = parse_atom(nfa, i);
+		if (IS_ERROR_SUBNFA(atom)) {
 			return atom;
 		}
-		nfa_new_trans(g, last, atom.entry);
+		nfa_new_trans(nfa, last, atom.entry);
 		last = atom.exit;
 	}
-	nfa_new_trans(g, last, seq.exit);
+	nfa_new_trans(nfa, last, seq.exit);
 	return seq;
 }
 
@@ -322,43 +322,43 @@ globs_new()
 {
 	struct globs *globs = malloc(sizeof *globs);
 
-	nfa_init(&globs->g);
+	nfa_init(&globs->dfa);
 	return globs;
 }
 
 void
 globs_free(struct globs *globs)
 {
-	nfa_fini(&globs->g);
+	nfa_fini(&globs->dfa);
 	free(globs);
 }
 
 const char *
 globs_add(struct globs *globs, const str *globstr, const void *ref)
 {
-	struct nfa *g = &globs->g;
+	struct nfa *nfa = &globs->dfa;
 	stri ip = stri_str(globstr);
-	struct subnfa outer = subnfa_frame(g);
-	struct subnfa seq = parse_sequence(g, &ip);
-	if (IS_ERROR_SUBGRAPH(seq)) {
+	struct subnfa outer = subnfa_frame(nfa);
+	struct subnfa seq = parse_sequence(nfa, &ip);
+	if (IS_ERROR_SUBNFA(seq)) {
 		return seq.error;
 	}
-	nfa_new_trans(g, outer.entry, seq.entry);
-	nfa_new_trans(g, seq.exit, outer.exit);
-	nfa_add_final(g, outer.exit, ref);
+	nfa_new_trans(nfa, outer.entry, seq.entry);
+	nfa_new_trans(nfa, seq.exit, outer.exit);
+	nfa_add_final(nfa, outer.exit, ref);
 	return NULL;
 }
 
 void
 globs_compile(struct globs *globs)
 {
-	nfa_to_dfa(&globs->g);
+	nfa_to_dfa(&globs->dfa);
 }
 
 int
 globs_step(const struct globs *globs, unsigned ch, unsigned *statep)
 {
-        const struct node *node = &globs->g.nodes[*statep];
+        const struct node *node = &globs->dfa.nodes[*statep];
         unsigned j;
 
         /* TODO replace this with a binary search, because the
@@ -377,7 +377,7 @@ globs_step(const struct globs *globs, unsigned ch, unsigned *statep)
 const void *
 globs_is_accept_state(const struct globs *globs, unsigned state)
 {
-        const struct node *node = &globs->g.nodes[state];
+        const struct node *node = &globs->dfa.nodes[state];
 
 	if (!node->nfinals)
 		return NULL;

@@ -24,11 +24,11 @@ putc_escaped(unsigned ch, FILE *file) {
  * intended for debugging/inspection.
  */
 void
-nfa_dump(FILE *file, const struct nfa *g, int current_state)
+nfa_dump(FILE *file, const struct nfa *nfa, int current_state)
 {
 	unsigned i, j, k;
-	for (i = 0; i < g->nnodes; ++i) {
-		const struct node *n = &g->nodes[i];
+	for (i = 0; i < nfa->nnodes; ++i) {
+		const struct node *n = &nfa->nodes[i];
 		fprintf(file, "%c%4u: %c ",
 		    current_state >= 0 && current_state == i ? '*' : ' ',
 		    i, n->nfinals ? 'F' : ' ');

@@ -32,20 +32,20 @@ struct nfa {
 
 
 /** Initializes existing graph storage. Release with #nfa_fini() */
-struct nfa *	nfa_init(struct nfa *g);
+struct nfa *	nfa_init(struct nfa *nfa);
 
 /** Releases content of an initialized graph structure */
-void		nfa_fini(struct nfa *g);
+void		nfa_fini(struct nfa *nfa);
 
 /** Allocates a new graph structure. Release with #nfa_free(). */
 struct nfa *	nfa_new(void);
 
 /** Releases all store associated with the graph structure */
-void 		nfa_free(struct nfa *g);
+void 		nfa_free(struct nfa *nfa);
 
 /** Adds a new, empty node to the graph. 
  * @returns the new node's index into @c{g->nodes[]}. */
-unsigned 	nfa_new_node(struct nfa *g);
+unsigned 	nfa_new_node(struct nfa *nfa);
 
 /**
  * Appends a pointer value to a node's #node.finals array.
@@ -57,7 +57,7 @@ unsigned 	nfa_new_node(struct nfa *g);
  * @param n     the node's index
  * @param final the final value to add to the node.
  */
-void		nfa_add_final(struct nfa *g, unsigned n, const void *final);
+void		nfa_add_final(struct nfa *nfa, unsigned n, const void *final);
 
 /**
  * Adds an epsilon transition to the graph.
@@ -75,13 +75,13 @@ void		nfa_add_final(struct nfa *g, unsigned n, const void *final);
  * (It's only valid until the call to this function, because
  * realloc may adjust pointers.)
  */
-struct transition *nfa_new_trans(struct nfa *g, unsigned from, unsigned to);
+struct transition *nfa_new_trans(struct nfa *nfa, unsigned from, unsigned to);
 
 /**
  * Converts a non-deterministic graph into a deterministic one.
  * @param dfa   where to store the deterministc graph
  * @param input the (non-deterministic) input graph
  */
-void nfa_to_dfa(struct nfa *g);
+void nfa_to_dfa(struct nfa *nfa);
 
 #endif /* nfa_h */

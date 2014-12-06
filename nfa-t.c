@@ -37,11 +37,11 @@ struct subnfa {
  *   |   '(' E ')'
  */
 
-static struct subnfa parse_exp(struct nfa *g, const char **sp);
+static struct subnfa parse_exp(struct nfa *nfa, const char **sp);
 
 /* A ::= [c-c] | . | c | (E) */
 static struct subnfa
-parse_atom(struct nfa *g, const char **sp)
+parse_atom(struct nfa *nfa, const char **sp)
 {
 	struct subnfa ret;
 	cclass *cc = NULL;
@@ -50,7 +50,7 @@ parse_atom(struct nfa *g, const char **sp)
 	
 	ch = *(*sp)++;
 	if (ch == '(') {
-		ret = parse_exp(g, sp);
+		ret = parse_exp(nfa, sp);
 		ch = *(*sp)++;
 		assert(ch == ')');
 		return ret;
@@ -83,29 +83,29 @@ parse_atom(struct nfa *g, const char **sp)
 	} else {
 		cclass_add(cc, ch, ch + 1);
 	}
-	ret.entry = nfa_new_node(g);
-	ret.exit = nfa_new_node(g);
-	t = nfa_new_trans(g, ret.entry, ret.exit);
+	ret.entry = nfa_new_node(nfa);
+	ret.exit = nfa_new_node(nfa);
+	t = nfa_new_trans(nfa, ret.entry, ret.exit);
 	t->cclass = cc;
 	return ret;
 }
 
 /* T ::= A? | A* | A */
 static struct subnfa
-parse_term(struct nfa *g, const char **sp)
+parse_term(struct nfa *nfa, const char **sp)
 {
 	char ch;
-	struct subnfa ret = parse_atom(g, sp);
+	struct subnfa ret = parse_atom(nfa, sp);
 
 	while ((ch = **sp) == '*' || ch == '?') {
 		struct subnfa sub = ret;
-		ret.entry = nfa_new_node(g);
-		ret.exit = nfa_new_node(g);
-		nfa_new_trans(g, ret.entry, sub.entry);
-		nfa_new_trans(g, sub.exit, ret.exit);
-		nfa_new_trans(g, sub.entry, sub.exit);
+		ret.entry = nfa_new_node(nfa);
+		ret.exit = nfa_new_node(nfa);
+		nfa_new_trans(nfa, ret.entry, sub.entry);
+		nfa_new_trans(nfa, sub.exit, ret.exit);
+		nfa_new_trans(nfa, sub.entry, sub.exit);
 		if (ch == '*')
-			nfa_new_trans(g, sub.exit, sub.entry);
+			nfa_new_trans(nfa, sub.exit, sub.entry);
 		++*sp;
 	}
 	return ret;
@@ -113,19 +113,19 @@ parse_term(struct nfa *g, const char **sp)
 
 /* S ::= empty | S T */
 static struct subnfa
-parse_sequence(struct nfa *g, const char **sp)
+parse_sequence(struct nfa *nfa, const char **sp)
 {
 	struct subnfa ret;
 	unsigned mid;
 
-	ret.entry = nfa_new_node(g);
-	mid = nfa_new_node(g);
-	nfa_new_trans(g, ret.entry, mid);
+	ret.entry = nfa_new_node(nfa);
+	mid = nfa_new_node(nfa);
+	nfa_new_trans(nfa, ret.entry, mid);
 	while (**sp && **sp != '|' && **sp != ')') {
-		struct subnfa next = parse_term(g, sp);
-		nfa_new_trans(g, mid, next.entry);
-		mid = nfa_new_node(g);
-		nfa_new_trans(g, next.exit, mid);
+		struct subnfa next = parse_term(nfa, sp);
+		nfa_new_trans(nfa, mid, next.entry);
+		mid = nfa_new_node(nfa);
+		nfa_new_trans(nfa, next.exit, mid);
 	}
 	ret.exit = mid;
 	return ret;
@@ -133,29 +133,29 @@ parse_sequence(struct nfa *g, const char **sp)
 
 /* F ::= S  |  F '|' S */
 static struct subnfa
-parse_factor(struct nfa *g, const char **sp)
+parse_factor(struct nfa *nfa, const char **sp)
 {
-	struct subnfa ret = parse_sequence(g, sp);
+	struct subnfa ret = parse_sequence(nfa, sp);
 
 	while (**sp == '|') {
 		struct subnfa alt = ret;
-		ret.entry = nfa_new_node(g);
-		ret.exit = nfa_new_node(g);
-		nfa_new_trans(g, ret.entry, alt.entry);
-		nfa_new_trans(g, alt.exit, ret.exit);
+		ret.entry = nfa_new_node(nfa);
+		ret.exit = nfa_new_node(nfa);
+		nfa_new_trans(nfa, ret.entry, alt.entry);
+		nfa_new_trans(nfa, alt.exit, ret.exit);
 		++*sp; /* '|' */
-		alt = parse_sequence(g, sp);
-		nfa_new_trans(g, ret.entry, alt.entry);
-		nfa_new_trans(g, alt.exit, ret.exit);
+		alt = parse_sequence(nfa, sp);
+		nfa_new_trans(nfa, ret.entry, alt.entry);
+		nfa_new_trans(nfa, alt.exit, ret.exit);
 	}
 	return ret;
 }
 
 /* E ::= F */
 static struct subnfa
-parse_exp(struct nfa *g, const char **sp)
+parse_exp(struct nfa *nfa, const char **sp)
 {
-	return parse_factor(g, sp);
+	return parse_factor(nfa, sp);
 }
 
 /* Creates an NFA graph from a test regular expression string */
@@ -163,35 +163,35 @@ static struct nfa *
 make_nfa(const char *s)
 {
 	struct subnfa res, sub;
-	struct nfa *g = nfa_new();
+	struct nfa *nfa = nfa_new();
 
-	res.entry = nfa_new_node(g);
-	res.exit = nfa_new_node(g);
-	nfa_add_final(g, res.exit, s);
+	res.entry = nfa_new_node(nfa);
+	res.exit = nfa_new_node(nfa);
+	nfa_add_final(nfa, res.exit, s);
 
-	sub = parse_exp(g, &s);
-	nfa_new_trans(g, res.entry, sub.entry);
-	nfa_new_trans(g, sub.exit, res.exit);
+	sub = parse_exp(nfa, &s);
+	nfa_new_trans(nfa, res.entry, sub.entry);
+	nfa_new_trans(nfa, sub.exit, res.exit);
 
-	return g;
+	return nfa;
 }
 
 /** Checks a graph to see if it really is a DFA. Aborts on error */
 static void
-assert_deterministic(const struct nfa *g)
+assert_deterministic(const struct nfa *dfa)
 {
 	unsigned i;
 	unsigned nfinals = 0;
 
-	assert(g->nnodes > 0);
-	for (i = 0; i < g->nnodes; ++i) {
-		const struct node *n = &g->nodes[i];
+	assert(dfa->nnodes > 0);
+	for (i = 0; i < dfa->nnodes; ++i) {
+		const struct node *n = &dfa->nodes[i];
 		unsigned j;
 		cclass *allcc = cclass_new();
 		for (j = 0; j < n->ntrans; ++j) {
 			const struct transition *t = &n->trans[j];
 			assert(t->cclass); /* no epsilons */
-			assert(t->dest < g->nnodes);
+			assert(t->dest < dfa->nnodes);
 			/* determinism check: */
 			assert(!cclass_intersects(t->cclass, allcc));
 			cclass_addcc(allcc, t->cclass);
@@ -208,17 +208,17 @@ assert_deterministic(const struct nfa *g)
 
 /* Tests if a string is accepted by a DFA */
 static int
-dfa_matches(const struct nfa *g, const char *str)
+dfa_matches(const struct nfa *dfa, const char *str)
 {
 	unsigned state = 0;
 	const char *s;
 
-	assert_deterministic(g);
+	assert_deterministic(dfa);
 
 	dprintf("dfa_matches: \"%s\":", str);
 	for (s = str; *s; ++s) {
 		char ch = *s;
-		const struct node *n = &g->nodes[state];
+		const struct node *n = &dfa->nodes[state];
 		const struct transition *trans = 0;
 		unsigned j;
 
@@ -237,7 +237,7 @@ dfa_matches(const struct nfa *g, const char *str)
 		dprintf(" ->");
 		state = trans->dest;
 	}
-	if (!g->nodes[state].nfinals) {
+	if (!dfa->nodes[state].nfinals) {
 		dprintf(" %u reject (end of string)\n", state);
 		return 0;
 	}

@@ -9,68 +9,68 @@
 /* graph */
 
 struct nfa *
-nfa_init(struct nfa *g)
+nfa_init(struct nfa *nfa)
 {
-	g->nnodes = 0;
-	g->nodes = 0;
-	return g;
+	nfa->nnodes = 0;
+	nfa->nodes = 0;
+	return nfa;
 }
 
 void
-nfa_fini(struct nfa *g)
+nfa_fini(struct nfa *nfa)
 {
 	unsigned i, j;
-	for (i = 0; i < g->nnodes; i++) {
-		struct node *n = &g->nodes[i];
+	for (i = 0; i < nfa->nnodes; i++) {
+		struct node *n = &nfa->nodes[i];
 		for (j = 0; j < n->ntrans; ++j) {
 			cclass_free(n->trans[j].cclass);
 		}
 		free(n->trans);
 		free(n->finals);
 	}
-	free(g->nodes);
-	g->nodes = 0;
-	g->nnodes = 0;
+	free(nfa->nodes);
+	nfa->nodes = 0;
+	nfa->nnodes = 0;
 }
 
 struct nfa *
 nfa_new()
 {
-	struct nfa *g = malloc(sizeof *g);
+	struct nfa *nfa = malloc(sizeof *nfa);
 
-	if (g) {
-		nfa_init(g);
+	if (nfa) {
+		nfa_init(nfa);
 	}
-	return g;
+	return nfa;
 }
 
 
 void
-nfa_free(struct nfa *g)
+nfa_free(struct nfa *nfa)
 {
-	if (g) {
-		nfa_fini(g);
-		free(g);
+	if (nfa) {
+		nfa_fini(nfa);
+		free(nfa);
 	}
 }
 
 unsigned
-nfa_new_node(struct nfa *g)
+nfa_new_node(struct nfa *nfa)
 {
 	unsigned i;
-	if ((g->nnodes % NODEINC) == 0) {
-		g->nodes = realloc(g->nodes,
-			(g->nnodes + NODEINC) * sizeof *g->nodes);
+	if ((nfa->nnodes % NODEINC) == 0) {
+		nfa->nodes = realloc(nfa->nodes,
+			(nfa->nnodes + NODEINC) * sizeof *nfa->nodes);
 	}
-	i = g->nnodes++;
-	memset(&g->nodes[i], 0, sizeof g->nodes[i]);
+	i = nfa->nnodes++;
+	memset(&nfa->nodes[i], 0, sizeof nfa->nodes[i]);
 	return i;
 }
 
 struct transition *
-nfa_new_trans(struct nfa *g, unsigned from, unsigned to)
+nfa_new_trans(struct nfa *nfa, unsigned from, unsigned to)
 {
-	struct node *n = &g->nodes[from];
+	struct node *n = &nfa->nodes[from];
 	struct transition *trans;
 	if (n->ntrans % TRANSINC == 0) {
 		n->trans = realloc(n->trans, 
@@ -83,9 +83,9 @@ nfa_new_trans(struct nfa *g, unsigned from, unsigned to)
 }
 
 void
-nfa_add_final(struct nfa *g, unsigned i, const void *final)
+nfa_add_final(struct nfa *nfa, unsigned i, const void *final)
 {
-	struct node *n = &g->nodes[i];
+	struct node *n = &nfa->nodes[i];
 	unsigned j;
 
 	/* Check if the value is already in the final set */
@@ -109,12 +109,12 @@ transition_is_epsilon(const struct transition *t)
 /* 
  * Compute the epsilon-closure of the set s.
  * That's all the states reachable through zero or more epsilon transitions
- * in g from any of the states in s.
- * @param g the graph with the epsilon transitions
+ * in nfa from any of the states in s.
+ * @param nfa the graph with the epsilon transitions
  * @param s the set to expand to epsilon closure
  */
 void
-epsilon_closure(const struct nfa *g, bitset *s)
+epsilon_closure(const struct nfa *nfa, bitset *s)
 {
 	unsigned ni, j;
 	struct node *n;
@@ -123,7 +123,7 @@ epsilon_closure(const struct nfa *g, bitset *s)
 
 	while (!bitset_is_empty(tocheck)) {
 		bitset_for(ni, tocheck) {
-			n = &g->nodes[ni];
+			n = &nfa->nodes[ni];
 			bitset_remove(tocheck, ni);
 			for (j = 0; j < n->ntrans; ++j) {
 				t = &n->trans[j];
@@ -415,10 +415,14 @@ make_dfa(struct nfa *dfa, const struct nfa *nfa)
 }
 
 void
-nfa_to_dfa(struct nfa *g)
+nfa_to_dfa(struct nfa *nfa)
 {
-	struct nfa nfa = *g;
-	nfa_init(g);
-	make_dfa(g, &nfa);
-	nfa_fini(&nfa);
+	/* move the content of nfa into a temporary copy */
+	struct nfa copy = *nfa;
+	/* reset the output automaton */
+	nfa_init(nfa);
+	/* construct a DFA from the copy */
+	make_dfa(nfa, &copy);
+	/* now nfa actually contains a dfa! */
+	nfa_fini(&copy);
 }
