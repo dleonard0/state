@@ -29,8 +29,8 @@ $(TESTS):
 check: $(TESTS:=.tested)
 %.tested: %
 	@if $(RUNTEST) $(abspath $<); \
-	 then printf '%-10s ... PASS\n' $(basename $<); \
-	 else printf '%-10s ... FAIL\n' $(basename $<); exit 1; \
+	 then printf '%-10s ... \033[32mPASS\033[m\n' $(basename $<); \
+	 else printf '%-10s ... \033[41mFAIL\033[m\n' $(basename $<); exit 1; \
 	 fi
 .PHONY: check 
 
