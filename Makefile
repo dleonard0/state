@@ -34,6 +34,9 @@ check: $(TESTS:=.tested)
 	 fi
 .PHONY: check 
 
+valgrind:; $(MAKE) check RUNTEST="valgrind -q"
+.PHONY: valgrind
+
 -include *.d
 
 SRCS = $(wildcard *.c *.h)
