@@ -113,7 +113,7 @@ cb_read(struct parser *p, char *dst, unsigned len)
 
 
 static void
-cb_define(struct parser *p, macro *lhs, int defkind, macro *text)
+cb_define(struct parser *p, macro *lhs, int defkind, macro *text, unsigned lineno)
 {
 	struct cb_context *context = parser_get_context(p);
 
@@ -133,7 +133,7 @@ cb_define(struct parser *p, macro *lhs, int defkind, macro *text)
 }
 
 static void
-cb_directive(struct parser *p, atom ident, macro *text)
+cb_directive(struct parser *p, atom ident, macro *text, unsigned lineno)
 {
 	struct cb_context *context = parser_get_context(p);
 
@@ -148,7 +148,7 @@ cb_directive(struct parser *p, atom ident, macro *text)
 }
 
 static int
-cb_condition(struct parser *p, int condkind, macro *t1, macro *t2)
+cb_condition(struct parser *p, int condkind, macro *t1, macro *t2, unsigned lineno)
 {
 	struct cb_context *context = parser_get_context(p);
 	switch (condkind) {
@@ -177,7 +177,7 @@ cb_condition(struct parser *p, int condkind, macro *t1, macro *t2)
 }
 
 static void
-cb_rule(struct parser *p, macro *goal, macro *depends)
+cb_rule(struct parser *p, macro *goal, macro *depends, unsigned lineno)
 {
 	struct cb_context *context = parser_get_context(p);
 
@@ -191,7 +191,7 @@ cb_rule(struct parser *p, macro *goal, macro *depends)
 }
 
 static void
-cb_command(struct parser *p, macro *text)
+cb_command(struct parser *p, macro *text, unsigned lineno)
 {
 	struct cb_context *context = parser_get_context(p);
 	cb_putc(context, '\t');

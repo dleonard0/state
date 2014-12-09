@@ -57,7 +57,7 @@ mm_read(struct parser *p, char *dst, unsigned len)
 }
 
 static void
-mm_directive(struct parser *p, atom ident, macro *text)
+mm_directive(struct parser *p, atom ident, macro *text, unsigned lineno)
 {
 	struct mm *mm = parser_get_context(p);
 	assert(!mm->macro);
@@ -65,7 +65,7 @@ mm_directive(struct parser *p, atom ident, macro *text)
 }
 
 static void
-mm_define(struct parser *p, macro *lhs, int defkind, macro *text)
+mm_define(struct parser *p, macro *lhs, int defkind, macro *text, unsigned lineno)
 {
 	struct mm *mm = parser_get_context(p);
 

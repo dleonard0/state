@@ -566,6 +566,7 @@ parse_one(struct parser *p)
 	/* TAB command */
 	if (peek(p) == '\t') {
 		macro *m;
+		unsigned lineno = p->lineno;
 		next(p);
 
 		m = 0;
@@ -578,7 +579,7 @@ parse_one(struct parser *p)
 			return error(p, "commands commence before rule");
 		}
 		if (enabled && p->cb->command) {
-			p->cb->command(p, m);
+			p->cb->command(p, m, lineno);
 		} else {
 			macro_free(m);
 		}
@@ -599,6 +600,7 @@ parse_one(struct parser *p)
 	if (peek(p) == '.') {
 		macro *text = 0;
 		atom ident;
+		unsigned lineno = p->lineno;
 
 		next(p);
 		if (!parse_ident(p, &ident)) {
@@ -613,7 +615,7 @@ parse_one(struct parser *p)
 		maybe_end_rule(p);
 
 		if (enabled && p->cb->directive) {
-			p->cb->directive(p, ident, text);
+			p->cb->directive(p, ident, text, lineno);
 		} else {
 			macro_free(text);
 		}
@@ -634,6 +636,7 @@ parse_one(struct parser *p)
 	if (condkind) {
 		int negate = condkind & CONDKIND_NEGATE;
 		int result;
+		unsigned lineno = p->lineno;
 		macro *t1 = 0, *t2 = 0;
 		condkind -= negate;
 		skip_sp(p);
@@ -675,7 +678,7 @@ parse_one(struct parser *p)
 		    }
 		}
 		if (enabled && p->cb->condition) {
-		    result = p->cb->condition(p, condkind, t1, t2);
+		    result = p->cb->condition(p, condkind, t1, t2, lineno);
 		    if (negate) result = !result;
 		} else {
 		    macro_free(t1);
@@ -742,6 +745,7 @@ parse_one(struct parser *p)
 	}
 	if (ch == '=') {
 		macro *text = 0;
+		unsigned lineno = p->lineno;
 		next(p); /* skip '=' */
 		skip_sp(p);
 		if (!parse_macro(p, CLOSE_LF | CLOSE_HASH, &text)) {
@@ -760,7 +764,7 @@ parse_one(struct parser *p)
 			    defch == '?' ? DEFKIND_WEAK :
 			    defch == '+' ? DEFKIND_APPEND :
 					   DEFKIND_DELAYED,
-			    text);
+			    text, lineno);
 		} else {
 			macro_free(lead);
 			macro_free(text);
@@ -772,6 +776,7 @@ parse_one(struct parser *p)
 
 	if (ch == ':') {
 		macro *depends = 0;
+		unsigned lineno = p->lineno;
 
 		next(p);
 		macro_rtrim(&lead);
@@ -792,7 +797,7 @@ parse_one(struct parser *p)
 		}
 		maybe_end_rule(p);
 		if (enabled && p->cb->rule) {
-			p->cb->rule(p, lead, depends);
+			p->cb->rule(p, lead, depends, lineno);
 		} else {
 			macro_free(depends);
 			macro_free(lead);
@@ -808,7 +813,7 @@ parse_one(struct parser *p)
 			    return 0;
 			}
 			if (enabled && p->cb->command) {
-			    p->cb->command(p, m);
+			    p->cb->command(p, m, lineno);
 			} else {
 			    macro_free(m);
 			}

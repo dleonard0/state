@@ -54,22 +54,26 @@ struct parser_cb {
 	 *                must be TAKEN or freed
 	 * @param defkind the kind of definition
 	 * @param text    the text, which must be TAKEN or freed
+	 * @param lineno  the line number, where the '=' appears
 	 *
 	 * Default behaviour: macro_free(lhs); macro_free(text)
 	 */
-	void (*define)(struct parser *p, macro *lhs, int defkind, macro *text);
+	void (*define)(struct parser *p, macro *lhs, int defkind,
+			macro *text, unsigned lineno);
 
 	/**
 	 * Called by parser to notify that a .directive line has
 	 * been encountered.
 	 * This event may happen anywhere.
-	 * @param p     parser context
-	 * @param ident the directive (excludes the '.')
-	 * @param text  the line of text which must be TAKEN or freed
+	 * @param p       parser context
+	 * @param ident   the directive (excludes the '.')
+	 * @param text    the line of text which must be TAKEN or freed
+	 * @param lineno  the line number where the '.' was
 	 *
 	 * Default behaviour: macro_free(text)
 	 */
-	void (*directive)(struct parser *p, atom ident, macro *text);
+	void (*directive)(struct parser *p, atom ident, macro *text,
+			  unsigned lineno);
 
 	/**
 	 * Called by the parser to evaluate an 'if' conditional.
@@ -80,11 +84,13 @@ struct parser_cb {
 	 *                 must be TAKEN or freed
 	 * @param t2       the other text following the condition,
 	 *                 must be TAKEN or freed
+	 * @param lineno   line number of the condition
 	 * @returns true if the condition is true.
 	 *
 	 * Default behaviour: macro_free(t1); macro_free(t2); return 0;
 	 */
-	int  (*condition)(struct parser *p, int condkind, macro *t1, macro *t2);
+	int  (*condition)(struct parser *p, int condkind,
+			  macro *t1, macro *t2, unsigned lineno);
 
 	/**
 	 * Called when a rule "goal: depends" starts.
@@ -95,21 +101,24 @@ struct parser_cb {
 	 *                must be TAKEN or freed
 	 * @param depends the dependency text,
 	 *                must be TAKEN or freed
+	 * @param lineno  the line number of the ':'
 	 *
 	 * Default behaviour: macro_free(goal); macro_free(depends);
 	 */
-	void (*rule)(struct parser *p, macro *goal, macro *depends);
+	void (*rule)(struct parser *p, macro *goal, macro *depends,
+		     unsigned lineno);
 
 	/**
 	 * Called when a command line is encountered.
 	 * This is only ever called within a rule.
-	 * @param p    parser context
-	 * @param text the command line, without leading TAB character,
-	 *             must be TAKEN or freed
+	 * @param p      parser context
+	 * @param text   the command line, without leading TAB character,
+	 *               must be TAKEN or freed
+	 * @param lineno the line number where the text begins
 	 *
 	 * Default behaviour: macro_free(text)
 	 */
-	void (*command)(struct parser *p, macro *text);
+	void (*command)(struct parser *p, macro *text, unsigned lineno);
 
 	/**
 	 * Called when the end of a rule has been detected.
