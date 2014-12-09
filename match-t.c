@@ -171,7 +171,7 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 #if DEBUG
 	fprintf(stderr, "  ");
 	for (i = stri_str(prefix); stri_more(i); stri_inc(i))
-		putc(stri_at(i) & 0x7f, stderr);
+		putc(stri_at(i), stderr);
 	if (!prefix) fprintf(stderr, "\"\"");
 	fprintf(stderr, ":\n");
 #endif
@@ -182,7 +182,7 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 	struct tree *node = ctxt->tree;
 	char buf[1024], *b;
 	for (b = buf, i = stri_str(prefix); stri_more(i); stri_inc(i)) {
-		*b++ = stri_at(i) & 0x7f;
+		*b++ = stri_at(i);
 	}
 	*b = '\0';
 	assert(!buf[0] || b[-1] == '/');
@@ -220,7 +220,7 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 #if DEBUG
 		fprintf(stderr, "    ");
 		for (i = stri_str(newm->str); stri_more(i); stri_inc(i))
-			putc(stri_at(i) & 0x7f, stderr);
+			putc(stri_at(i), stderr);
 		if (newm->flags & MATCH_DEFERRED)
 			fprintf(stderr, " ...");
 		fprintf(stderr, "\n");
@@ -317,7 +317,7 @@ assert_matches_(const char *file, int lineno,
 		fprintf(stderr, "  * ");
 		stri si;
 		for (si = stri_str(result); stri_more(si); stri_inc(si))
-			putc(stri_at(si) & 0x7f, stderr);
+			putc(stri_at(si), stderr);
 		if (!result) fprintf(stderr, "(null)");
 		if (result && ref) fprintf(stderr, " = %s", (const char *)ref);
 		fprintf(stderr, "\n");
@@ -364,7 +364,7 @@ assert_matches_(const char *file, int lineno,
 				file, lineno);
 			stri i;
 			for (i = stri_str(result); stri_more(i); stri_inc(i))
-				putc(stri_at(i) & 0x7f, stderr);
+				putc(stri_at(i), stderr);
 			fprintf(stderr, "'\n");
 			error = 1;
 		}

@@ -84,14 +84,11 @@ matcher_next(struct matcher *matcher, const void **ref_return)
 		while ((m = *mp)) {
 			if (stri_more(m->stri)) {
 				/* Advance the match candidate's state */
-				unsigned ch = stri_at(m->stri);
+				unsigned ch = stri_utf8_inc(&m->stri);
 				if (!globs_step(matcher->globs, ch, &m->state)){
 					/* Failed to advance; reject it */
 					*mp = m->next;
 					match_free(m);
-				} else {
-					/* Step one char */
-					stri_inc(m->stri);
 				}
 			} else if (m->flags & MATCH_DEFERRED) {
 				/* The string is exhausted, but it's

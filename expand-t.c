@@ -133,10 +133,12 @@ print_char(FILE *f, int ch)
 		fprintf(f, "\\%c", ch);
 	else if (ch < ' ')
 		fprintf(f, "\\x%02x", ch);
-	else if (ch >= 0x7f)
+	else if (ch < 0x7f)
+		putc(ch, f);
+	else if (ch <= 0xffff)
 		fprintf(f, "\\u%04x", ch);
 	else
-		putc(ch, f);
+		fprintf(f, "\\u+%06x", ch);
 }
 
 static void
@@ -152,8 +154,8 @@ static void
 print_str(FILE *f, str *s)
 {
 	stri i;
-	for (i = stri_str(s); stri_more(i); stri_inc(i)) {
-		print_char(f, stri_at(i));
+	for (i = stri_str(s); stri_more(i); ) {
+		print_char(f, stri_utf8_inc(&i));
 	}
 }
 

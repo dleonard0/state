@@ -173,6 +173,8 @@ str_cmp(const str *a, const str *b)
 		    ai.pos += minlen;
 		    bi.pos += minlen;
 		} else {
+		    /* UTF-8 strings have the property of being
+		     * byte-compared without decoding */
 		    char ca = stri_at(ai);
 		    char cb = stri_at(bi);
 		    if (ca < cb)

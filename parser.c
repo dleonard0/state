@@ -313,9 +313,10 @@ macro_erase_last_assign_prefix(macro *m)
 #define MAX_UTF8  8
 
 /**
- * Read one UTF-8 character into the buffer.
+ * Attempt to read a UTF-8 encoded codepoint from the
+ * input stream. The codepoint is not decoded; just stored.
  * @param utf8 return storage. It will be NUL terminated.
- * @return 1 on success
+ * @return 1 on success, 0 if bad UTF-8.
  */
 static int
 parse_utf8(struct parser *p, char utf8[static MAX_UTF8])
@@ -521,7 +522,7 @@ again:
 	    if (isspace(ch))
 	        return error(p, "unexpected whitespace after $");
 
-	    /* '$' can also be followed by one UTF8 character */
+	    /* '$' can also be followed by one valid UTF8 character */
 	    {
 		char utf8[MAX_UTF8];
 	        macro *args_macro = macro_new_reference();
