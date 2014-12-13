@@ -104,7 +104,15 @@ int
 main()
 {
 	check_prereq("a@1");
+	check_prereq("{a b c}");
+	check_prereq("{a}");
+	check_prereq("(h)");
+	check_prereq("(a b) c");
+	check_prereq("(a {x y (i)} x) c");
 	fail_parse(")");
+	fail_parse("{");
+	fail_parse("a (");
+	fail_parse("(x}");
 
 	return 0;
 }
