@@ -80,8 +80,18 @@ int       str_cmp(const str *a, const str *b);
  * Compare a STR against a C string for equality.
  * @param a  a STR
  * @param cs a NUL-terminated C string
+ * @return 0 unless the strings are equal
  */
 int       str_eq(const str *s, const char *cs);
+
+/**
+ * Compare the leading parts of a STR against a C string for equality.
+ * @param a     a STR
+ * @param cs    a C string
+ * @param cslen number of characters to compare
+ * @return 0 unless the strings are equal up to the first @a cslen
+ *         characters
+ */
 int       str_eqn(const str *s, const char *cs, unsigned cslen);
 
 /**
