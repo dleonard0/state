@@ -49,7 +49,7 @@ struct str; /* forward decl */
  * a reference value to return when it matches a string.
  *
  * @param globs       The set of patterns to add to
- * @param globstr     A string containing an extended
+ * @param globstr     A UTF-8 string containing an extended
  *                    glob expression. (NOT TAKEN) (See above)
  * @param ref         The pointer that will be returned
  *                    by #globs_is_accept()

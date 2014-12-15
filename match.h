@@ -88,7 +88,7 @@ struct globs;
  */
 struct match {
 	struct match *next;
-	str *str;		/* candidate string (owned) */
+	str *str;		/* candidate string, UTF-8 encoded (owned) */
 	unsigned flags;
 #define MATCH_DEFERRED	1	/* flags: generator can yield more strings */
 	stri stri;		/* position of next character to match */
@@ -98,7 +98,7 @@ struct match {
 /**
  * Allocates a new match structure.
  * Only the flags and str fields are initialized.
- * @param str  the string in the match (TAKEN)
+ * @param str  the UTF-8 string in the match (TAKEN)
  */
 struct match *match_new(str *str);
 
@@ -137,7 +137,7 @@ struct generator {
 	 *
 	 * @param mp      address of a #match.next field into which to
 	 *                store the new #match elements
-	 * @param prefix  The string whose extension is being deferred,
+	 * @param prefix  The UTF-8 string whose extension is being deferred,
 	 *                or the empty string (@c NULL).
 	 * @param gcontext The generator context argument given to
 	 *                #matcher_new().
@@ -179,7 +179,7 @@ struct matcher *matcher_new(const struct globs *globs,
  * a pattern from the globset.
  * @param ref_return  Optional pointer to storage where to
  *                    store the glob's associated reference.
- * @returns the str that matched (caller must free this string),
+ * @returns the UTF-8 str that matched (caller must free this string),
  *          or @c NULL when the generator is exhausted.
  */
 str *matcher_next(struct matcher *matcher, const void **ref_return);

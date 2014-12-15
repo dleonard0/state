@@ -4,6 +4,7 @@
 /*
  * A 'str' is a linked list of shared text segments, designed to be
  * space and speed efficient.
+ * Conventionally, the string content is UTF-8 encoded bytes.
  * Each segment is reference counted.
  * (Use the #STR macro to get self-releasing strings.)
  */
