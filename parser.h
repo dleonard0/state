@@ -51,7 +51,8 @@ struct parser_cb {
 	 * This event may happen anywhere.
 	 * @param p       parser context
 	 * @param lhs     the left-hand-side being defined,
-	 *                must be TAKEN or freed
+	 *		  having been trimmed of whitespace.
+	 *                It must be TAKEN/freed by this function.
 	 * @param defkind the kind of definition
 	 * @param text    the text, which must be TAKEN or freed
 	 * @param lineno  the line number, where the '=' appears

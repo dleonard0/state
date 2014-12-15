@@ -20,8 +20,7 @@ varscope_new(struct varscope *outer) {
 }
 
 static inline struct var *
-varscope_get(const struct varscope *varscope,
-	const char * /*atom*/ varname)
+varscope_get(const struct varscope *varscope, const char * /*atom*/ varname)
 {
 	return scope_get((struct scope *)varscope, varname);
 }
