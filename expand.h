@@ -2,7 +2,7 @@
 #define expand_h
 
 struct str;
-struct scope;
+struct macroscope;
 struct macro;
 
 /*
@@ -19,6 +19,6 @@ struct macro;
  *          the string, or @a str_ret parameter. See #str_xcat().
  */
 struct str **expand_macro(struct str**str_ret, const struct macro *macro,
-	const struct scope *scope);
+	const struct macroscope *scope);
 
 #endif /* expand_h */

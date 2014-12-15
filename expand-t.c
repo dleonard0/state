@@ -4,7 +4,7 @@
 
 #include "str.h"
 #include "macro.h"
-#include "scope.h"
+#include "macroscope.h"
 #include "dict.h"
 #include "parser.h"
 #include "expand.h"
@@ -35,7 +35,7 @@ struct mm {
 	unsigned texti;    /* next index into text[] */
 	const char *textp; /* current char pos in text[texti-1] */
 	macro *macro;
-	struct scope *scope;
+	struct macroscope *scope;
 };
 
 static int
@@ -73,7 +73,7 @@ mm_define(struct parser *p, macro *lhs, int defkind, macro *text, unsigned linen
 	assert(defkind == DEFKIND_DELAYED);
 	assert(lhs && lhs->type == MACRO_STR && !lhs->next);
 
-	scope_put(mm->scope, atom_from_str(lhs->str), text);
+	macroscope_put(mm->scope, atom_from_str(lhs->str), text);
 	macro_free(lhs);
 }
 
@@ -213,7 +213,7 @@ assert_expands_(const char *file, int lineno,
 		.text = texts,
 		.texti = 0, .textp = "",
 		.macro = 0,
-		.scope = scope_new(0, (void (*)(void *))macro_free),
+		.scope = macroscope_new(0),
 	};
 
 	parse(&cb, &mm);
@@ -233,7 +233,7 @@ assert_expands_(const char *file, int lineno,
 		print_macro(stderr, mm.macro);
 		fprintf(stderr, "'\n");
 
-		struct dict_iter *di = dict_iter_new(mm.scope->dict);
+		struct dict_iter *di = dict_iter_new(mm.scope->scope.dict);
 		const void *key;
 		void *value;
 		fprintf(stderr, "  scope content:\n");
@@ -249,7 +249,7 @@ assert_expands_(const char *file, int lineno,
 
 	str_free(actual);
 	macro_free(mm.macro);
-	scope_free(mm.scope);
+	macroscope_free(mm.scope);
 }
 
 

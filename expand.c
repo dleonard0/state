@@ -2,7 +2,7 @@
 
 #include "atom.h"
 #include "str.h"
-#include "scope.h"
+#include "macroscope.h"
 #include "macro.h"
 #include "dict.h"
 #include "expand.h"
@@ -13,7 +13,7 @@
  * If FROM is empty string, then simply append TO to the end of TEXT
  */
 static str **
-func_subst(str **x, unsigned argc, const str **args, const struct scope *scope)
+func_subst(str **x, unsigned argc, const str **args, const struct macroscope *scope)
 {
 	const str *FROM = args[1];
 	const str *TO = args[2];
@@ -57,8 +57,9 @@ func_subst(str **x, unsigned argc, const str **args, const struct scope *scope)
 	return str_xcatr(x, out_start, out_end);
 }
 
+/* A type for all the $(func ...) function implementations */
 typedef str **(*func_t)(str **x, unsigned argc, const str **args,
-			const struct scope *scope);
+			const struct macroscope *scope);
 
 static struct dict *Func_dict;
 static void
@@ -90,7 +91,7 @@ find_func(atom name)
  * @param args all arguments (including a string copy of arg0)
  */
 static str **
-expand_apply(str **x, atom arg0, unsigned argc, const str **args, const struct scope *scope)
+expand_apply(str **x, atom arg0, unsigned argc, const str **args, const struct macroscope *scope)
 {
 	if (argc > 1) {
 		func_t func = find_func(arg0);
@@ -98,11 +99,11 @@ expand_apply(str **x, atom arg0, unsigned argc, const str **args, const struct s
 			return (*func)(x, argc, args, scope);
 		}
 	}
-	return expand_macro(x, scope_get(scope, arg0), scope);
+	return expand_macro(x, macroscope_get(scope, arg0), scope);
 }
 
 str **
-expand_macro(str **x, const macro *macro, const struct scope *scope)
+expand_macro(str **x, const macro *macro, const struct macroscope *scope)
 {
 	for (; macro; macro = macro->next) {
 		switch (macro->type) {
