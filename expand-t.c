@@ -3,8 +3,8 @@
 #include <stdio.h>
 
 #include "str.h"
-#include "macro.h"
-#include "macroscope.h"
+#include "var.h"
+#include "varscope.h"
 #include "dict.h"
 #include "parser.h"
 #include "expand.h"
@@ -35,7 +35,7 @@ struct mm {
 	unsigned texti;    /* next index into text[] */
 	const char *textp; /* current char pos in text[texti-1] */
 	macro *macro;
-	struct macroscope *scope;
+	struct varscope *scope;
 };
 
 static int
@@ -73,7 +73,9 @@ mm_define(struct parser *p, macro *lhs, int defkind, macro *text, unsigned linen
 	assert(defkind == DEFKIND_DELAYED);
 	assert(lhs && lhs->type == MACRO_STR && !lhs->next);
 
-	macroscope_put(mm->scope, atom_from_str(lhs->str), text);
+	struct var *var = var_new(VAR_DELAYED);
+	var->delayed = text;
+	varscope_put(mm->scope, atom_from_str(lhs->str), var);
 	macro_free(lhs);
 }
 
@@ -213,7 +215,7 @@ assert_expands_(const char *file, int lineno,
 		.text = texts,
 		.texti = 0, .textp = "",
 		.macro = 0,
-		.scope = macroscope_new(0),
+		.scope = varscope_new(0),
 	};
 
 	parse(&cb, &mm);
@@ -249,7 +251,7 @@ assert_expands_(const char *file, int lineno,
 
 	str_free(actual);
 	macro_free(mm.macro);
-	macroscope_free(mm.scope);
+	varscope_free(mm.scope);
 }
 
 
