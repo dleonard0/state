@@ -1,9 +1,9 @@
 
 OVERVIEW
 
-  This file describes a tool named 'state' whose function is to drive a
-  system of state files through process-associated transitions, in order
-  to reach the user-specified state.
+  This file describes a tool, tentatively named 'state', whose function is
+  to drive a system of state files through process-associated transitions,
+  so as to reach a user-specified state.
 
   For example, the command:
 
@@ -13,60 +13,57 @@ OVERVIEW
 
 	$ echo active > a/state
 
-  except that it also runs commands from a Makefile-like rules file.
-  Only when the commands associated with transitions to a@active succeed 
-  will the file named a/state be re-written to hold the string "active".
+  except that it also runs some related commands from a (Makefile-like)
+  Statefile.  When the commands associated with transitions to a@active
+  succeed, the file named a/state is updated to hold the string "active".
+  During this time, the file a/state is locked (flock).
 
-  If you'd like a little more detail, the state tool example entails
-  it doing the following:
+DEFINITIONS
 
-    * It searches for transition rule files by searching for files named
-      "Staterules" and ".sr" files in the affected state directories, 
-      in this case files matching "a/*.sr".
-    * It reads the first line of 'a/state' to see if it is already
-      the goal string 'active' -- If it was then it would exit with success;
-    * Otherwise it uses the rules computes a transition graph to a@active,
-      and performs the transition commands to alter states until
-      the goal state a@active is reached;
-    * It updates the 'a/state' file to contain the word 'active';
-    * Success
-  
+  state system - a directory containing state value, and optional rule files
+  state rules  - transition definitions, ending in '.states'
+  state value  - a simple string, stored in a file named 'state'
+  state        - collective name for the pair <state system>@<state value>
 
 UNIX INTEGRATION
 
-  The state tool tries to fit the unix tool philosophy: 
-  
-  * state is held in the filesystem as simple text strings;
-  * the tool does just one thing: drive states through transitions;
-  * the rule files are in simple, editable text format;
-  * state directories are open for extension;
-  * transition actions are expressed as shell commands;
-  * parallel instances of the tool interact correctly, concurrently
-    using the filesystem to communicate state
+  The tool tries to fit the unix tool philosophy:
 
+  * state is stored in the filesystem as a simple text file;
+  * the tool concentrates on just one thing: advancing states
+    through transitions;
+  * the rules are in a simple, editable text format;
+  * state systems are directories, open for extension;
+  * transition actions are shell commands;
+  * parallel instances of the tool interact using the
+    filesystem to communicate
 
-STATERULES FILES
+RULES
 
-  The state rule files (Staterules and *.sr) contain the transition rules
-  using a syntax similar to that used by make.
+  The state rule files are parsed for transition rules with syntax
+  similar to that used by make:
 
-  	<goal-patterns> : <required-states> [;]
+	<goal-patterns> : <required-states> [;]
 		<command>
 		...
 
-  It also contains a variable/macro system, nearly identical to GNU make:
+  The syntax also admits a simple variable/macro system, similar that
+  provided by GNU make: (See PATTERNS AND MACROS, below.) Variables
+  are defined:
 
-  	<variable-ident> {=|:=|?=} <macro-text>
-  
-  The <required-states> indicate what states must be reached first before
-  attempting a transition to a goal. Once the required states
-  have been reached, the transition the goal is committed to:
-  each <command> is run in sequence. 
+	<variable-ident> {=|:=|?=} <macro-text>
 
-  If all the commands succeed, then the state file is updated with the
-  goal state. If a command fails, the state is not changed, and either
-  the tool fails, or it attempts to find another path to the goal.
-  
+  In a transition rule, the <required-states> list indicate what states
+  must be reached first before the tool can attempt a transition to a
+  goal. Once the required states have been reached, the transition is
+  committed to and each <command> is run in sequence.
+
+  If all of the commands succeed, then the state file is updated
+  with the goal state. If a command fails, the state is not changed, and
+  either the tool fails, or it attempts to find another path to the
+  given goal. (An .error directive can be used to force the state file
+  to be set to an fixed value on error.)
+
   Consider this rule:
 
 	eth0@UP:
@@ -83,53 +80,48 @@ STATERULES FILES
   abandon the transition using that rule, then try again with the
   second rule.
 
-  	eth0@UP:
+	eth0@UP:
 		ifconfig eth0 up
 		ifconfig eth0 | grep up
-  	eth0@UP:
+	eth0@UP:
 		ifconfig eth0 delete
 		ifconfig eth0 up --force
 
 
-DEPENDENCIES AND WEIGHTS
+PREREQUISTITES AND WEIGHTS
 
-  Dependencies of a goal G are the states required to have been reached
-  before a rule transition to the goal state G can be achieved. Once
-  the minimum number of dependencies for G have been achieved, 
-  the transition to G is attempted.
+  A transition rule's goal is optionally followed by a list of prerequisite goals.
+  A transition can only be made when all the prerequisites are met.
 
-  (TODO: How does locking work out here? What are the rules?)
+  The prerequisite states are locked while the transition proceeds.
+  The main feature of the tool is that it will figure out the cheapest sequence
+  of transitions to reach a given state.
 
-  Normally, dependencies are treated as a disjunction. Only one
-  of the dependent states needs to be achieved in order for the
-  transition to proceed:
+  Transitions are expressed in an abstract fashion:
 
-  	G : A B C		-- means A or B or C states are required
+	<goal-pattern>  : <prerequistite-macro>
 
-  BUt conjunction can be indicated using &, which has higher precedence
+  Because the concrete goal name is known, the prereq macro can make use
+  of special variables such as $@.
 
-  	G : A B & C             -- means A or (B and C)
+  When the prereq-macro finishes expanding, it is then interpreted as
+  a prerequisite expression enclosed in { }. The expression has the
+  following forms:
 
-  (The reason for disjunction-by-default is that macro expansion
-  uses whitespace to separate related states.)
+	{ <P> ...  }         - any of the <P>s must be met -- default
+	( <P> ...  )         - all of the <P>s must be met
+	<dir>@<value>	     - <dir>/state must contain the string <value>
+	! <P>		     - the <P> must not be met
 
-  The system searches the transition graph to find the lowest-cost, 
-  required state to attempt next. The cost of any transition defaults
-  to 100, but this can be altered with a .COST directive.
-  Transitions that have the same cost are treated as if their costs
-  were slightly adjusted so that earlier rules are slightly cheaper.
+  The system searches the transition graph to find the least-cost
+  transition sequence to satisfy the prereq expression.
 
-  Cheapest transitions are always tried fist.
-
-  The states of a conjunctions ('&') are always tried simultaneously
-  and indepdendenly of each other.
-  
-  Failure to reach a required state will abort, leaving the system
-  in the intermediate state.
+  Transitions that are defined earlier are considered to be
+  slightly cheaper.
 
 RETRIES AND TIMEOUTS
 
-  State rules that are expected to fail can be annotated with 
+  Transition rules that are expected to fail can be annotated with
   .RETRIES for automatic retry (with a delay defaulting to 1 second).
   They can also be aborted if they take too long, by using the
   .TIMEOUT directive.
@@ -149,21 +141,41 @@ RETRIES AND TIMEOUTS
   Outside of a rule, the first argument to such directives is a pattern
   glob. This means that defaults can be specified using '*':
 
-  	.TIMEOUT * 60
+	.TIMEOUT * 60
 
   Later directives always supercede earlier ones.
 
+ERROR STATES
+
+  If a rule's commands fail, the default behaviour is to abandon
+  the transition, leaving the system state unchanged.
+  It may be useful to automatically transition to an explicit error
+  state. This is indicated with the macro
+
+	.ERRORSTATE <error> <patternglob>
+
+  This says that should state systems matching the <fileglob> fail
+  transitioning to <rule>, they should instead be recorded as being
+  in state <error>.
+
 PATTERNS AND MACROS
 
-  A macro is a string expanded at use time. Expansion involves
-  finding substrings that are variable references, function references,
-  or brace expressions are expanding them as follows:
+  A macro is a string expanded at use time. Most text in a state rule
+  file except command scripts are treated as macros and expanded just
+  before use.
 
-  	$(VAR) 			- environment expansion (terminal)
-	${VAR}			- same as $(VAR)
-  	a{b,c}d			- expands to: abd acd
-	{n..m}			- same as {n,n+1,n+2,...,m}
-				  for integers and single chars
+  Macro expansion involves first expanding braces, then substituting
+  variable references, and function references.
+
+  (If a brace expansion does not contain a comma, nor a .. sequence,
+  then it is left unchanged.)
+
+  Variable expansion is usually delayed until the macro text
+  is required, and is dependent upon environment variables:
+
+	$(VAR)                  - environment variable expansion
+	$(func arg1,arg2,...)   - macro function, eg $(subst FROM,TO,TEXT)
+	${VAR}                  - same as $(VAR) (but functions not permitted)
 
   A pattern is a string containing wildcards (globs). It is tested against
   all the strings of an extrinsic "match environment", and results in
@@ -173,16 +185,16 @@ PATTERNS AND MACROS
   Substrings of a pattern have the following meaning:
 
 	?			- match any single character
-  	*			- same as *(?)
-  	[xyz]			- character class; similar to @(x|y|z)
-  	?(pattern|...)		- match 0 or 1
-  	*(pattern|...)		- match 0 or more
-  	+(pattern|...)		- match 1 or more
-  	@(pattern|...)		- match 1 of the patterns
-  	!(pattern|...)		- match 0
+	*                       - same as *(?)
+	[xyz]                   - character class; similar to @(x|y|z)
+	?(pattern|...)          - match 0 or 1
+	*(pattern|...)          - match 0 or more
+	+(pattern|...)          - match 1 or more
+	@(pattern|...)          - match 1 of the patterns
+	!(pattern|...)          - (not supported)
 
-  For example, the pattern eth0@@(up|down) is the same as 
-  	@(eth0@up|eth0@down)
+  For example, the pattern eth0@@(up|down) is the same as
+	@(eth0@up|eth0@down)
 
 RULE EXPANSION
 
@@ -198,78 +210,75 @@ RULE EXPANSION
   A rule with multiple left-hand-side terms is exactly equivalent to
   specifying the rule multiple times for each term. That is, The rule
 
-  	a b: DEP ; CMD
+	a b: DEP ; CMD
 
   is exactly equivalent to
 
-  	a: DEP ; CMD
+	a: DEP ; CMD
 	b: DEP ; CMD
+
+SPECIAL VARIABLES
+
+	$@		expands to the current full <dir>@<state> goal
+	$(@D)		expands to the <dir> part of $@
+	$(@S)		expands to the <state> part of $@
+
+SPECIAL FUNCTIONS
+
+	$(subst FROM,TO,TEXT)
+	$(seq LO,HI[,INC])
+	$(foreach VAR,WORDS,MACRO)
+	$(call VAR[,ARG...])
 
 PROPERTIES
 
-  The file named a/prop/MAC is used to contain the property
-  definition of variable $(MAC) when rules regarding state a 
-  are running.
+  Properties are extensions of state that can be stored in the
+  state system directory. Before any command in a transition rule
+  is run, its environment is updated by reading files under
+  the subdirectory "prop". For example, the file eth0/prop/MAC
+  is used to set the shell variable $MAC (and the macro variable
+  $(MAC)).
 
-  Properties are made available to scripts through the process
-  environment.
+  The macro function $(property P) expands to the
+  unquoted path of the file containing the property text of $(P).
 
-  The property file can either be updated directly, otherwise
-  lines of the form <IDENT>=<value> are equivalent.
-
-  	eth0@UP:
+	eth0@UP:
 		ifconfig eth0 up
-		cat /sys/class/net/eth0/address >$(property MAC)
-		MAC=$(shell cat /sys/class/net/eth0/address)
+		cp /sys/class/net/eth0/address >$(property MAC)
 		echo eth0 mac address is $(MAC)
-	
+
   Properties are made available to shell fragments through the enviroment.
+  Properties can be deleted, and patterns are permitted
 
-  		.UNSET MAC MY_ADDR
-  		.UNSET *_ADDR
-		.UNSET *
-		rm -f $(property MAC)
+		$(RM) $(property MAC)
 
-DEPENDENCIES
-
-  A rule's goal is optionally followed by a list of dependency patterns.
-  If ANY ONE of the dependent patterns has been reached, then the current
-  goal can be progressed.
-
-  	eth0@UP: eth0@DOWN eth0@FROZEN
 
 
 STATE GROUPS
 
   Sometimes it is useful to group states together so that dependencies
-  are simpler. 
-  
-  One way to do this is with careful naming of your state names using 
+  are simpler.
+
+  One way to do this is with careful naming of your state names using
   a prefix you can match on. For example, your states might be:
   running/up running/paused stopped/down. Then you can specify patterns
   such as eth0@running/* or eth0@stopped/*.
 
-  But that is boring. Another way is to make use of the special partition
-  definition
+  Another way is to assign all the various states to a variable and then
+  join them to create a pattern that matches any. This is what the
+  special group variable expression $(|var) does.
 
-	<running>: up paused
-  
-  specify a partitioning of states:
-
-  	.PARTITION eth* running = up paused
-
-  After this definition, the string
-  	eth1@<running>   
-  is pattern-converted to eth1@@(up|paused)
-  and macro-converted to eth1@{up,paused}
-
+  For example, say you have defined $(running) as:
+	running = up paused
+  then $(|running) will expand to
+	@(up|paused)
 
 BUGS
 
   Consider these transition rules:
 
 	#  left <--> middle-left <--> middle-right <--> right
-  	*@left: *@middle-left
+	*@left: *@middle-left
 	*@middle-left: *@left
 	*@middle-left: *@middle-right
 	*@middle-right: *@middle-left
@@ -279,9 +288,9 @@ BUGS
   Say the initial state is a@middle-right, and these two concurrent
   instances are started:
 
-  	state a@left
+	state a@left
 	state a@right
 
   The resulting system may end up oscillating forever between
-  a@middle-left and @middle-right. 
-  
+  a@middle-left and @middle-right.
+
