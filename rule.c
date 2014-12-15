@@ -53,7 +53,7 @@ rule_cb_read(struct parser *p, char *dst, unsigned len)
 	struct rule_parse_ctxt *rpctxt = parser_get_context(p);
 
 	/* Just pass through to the reader we were given */
-	return rpctxt->fr->read(rpctxt->fctxt, dst, len);
+	return rpctxt->fr->read(rpctxt->rctxt, dst, len);
 }
 
 static void
