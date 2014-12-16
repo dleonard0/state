@@ -20,6 +20,20 @@ struct str;
 atom atom_s(const char *s);
 
 /**
+ * Returns the atom associated with the C substring.
+ * Zero-length substrings map to the "" atom.
+ * 
+ * Note on efficiency: atoms are optimized around
+ * C strings, so this function has to copy the substring
+ * and append a NUL byte before it can find the atom.
+ *
+ * @param  s   start of the substring
+ * @param  len length of the substring
+ * @return a unique value for the given string.
+ */
+atom atom_sn(const char *s, unsigned len);
+
+/**
  * Returns the atom associated with a string.
  * The NULL string maps to the "" atom.
  * @param str the string form of the atom.

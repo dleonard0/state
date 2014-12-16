@@ -108,6 +108,32 @@ atom_s(const char *s)
 	return seg->data;
 }
 
+atom
+atom_sn(const char *s, unsigned len)
+{
+	struct dict *dict;
+	struct str_seg *nseg, *oseg;
+
+	if (!len) {
+		return empty_atom;
+	}
+
+	nseg = malloc(sizeof (struct str_seg) + len);
+	nseg->refs = 1;
+	memcpy(nseg->data, s, len);
+	nseg->data[len] = '\0';
+
+	dict = atom_dict();
+	oseg = dict_get(dict, nseg->data);
+	if (!oseg) {
+		oseg = nseg;
+		dict_put(dict, oseg->data, oseg);
+	} else {
+		free(nseg);
+	}
+	return oseg->data;
+}
+
 struct str **
 atom_xstr(struct str **ret, atom a)
 {

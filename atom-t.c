@@ -43,5 +43,12 @@ main(void)
 		assert(str_eq(s, "AB"));
 		str_free(s);
 	}
+	{
+		atom C = atom_s("C");
+		atom D = atom_sn("DX", 1);
+
+		assert(atom_sn("CX", 1) == C);
+		assert(atom_s("D") == D);
+	}
 	return 0;
 }
