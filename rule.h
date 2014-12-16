@@ -28,26 +28,39 @@ struct rule {
 	struct location location;	/* where the rule was defined */
 	struct {
 		struct macro *macro;
-		struct str *str;
+		struct str *str;	/* (left NULL after parse) */
 	} goal;
 	struct {
 		struct macro *macro;
-		struct prereq *prereq;
+		struct prereq *prereq;	/* (left NULL after parse) */
 	} depend;
 	struct command *commands;	/* commands to run */
 };
 
 /**
- * Parses rules from a file and inserts them into the given list.
+ * Parses rules and definitions from a file and returns
+ * a list of rules.
+ * 
  * @param rp    where to store the list of rules
- * @param path  path to file to read rules from
- * @param scope a scope to modify
+ * @param path  path of the file to read rules from
+ * @param scope a scope to use and modify
  * @param fr    file reader
  * @param fctct context to pass fr->open()
+ *
  * @returns address of last rule's next pointer
  */
 struct rule ** rules_parse(struct rule **rp, const struct str *path,
 			   struct varscope *scope,
 			   const struct reader *fr, void *fctxt);
+
+/**
+ * Releases storage associated with a given rule
+ * Take care: any globs created from the rule goals may still
+ * have a reference to the rule.
+ */
+void rule_free(struct rule *rule);
+
+/** Frees a list of rules, and stores a NULL pointer */
+void rules_free(struct rule **rules);
 
 #endif /* rule_h */

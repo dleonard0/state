@@ -53,7 +53,6 @@ static const struct reader test_reader = {
 	.close = test_close
 };
 
-
 int
 main()
 {
@@ -64,7 +63,10 @@ main()
 		rp = rules_parse(&rules, PATH, scope, &test_reader,
 			"");
 		*rp = 0;
+		assert(!rules);
+		rules_free(&rules);
 	}
+
 	str_free(PATH);
 	return 0;
 }

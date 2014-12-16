@@ -24,7 +24,7 @@ t-expand: expand-t.o str.o dict.o atom.o macro.o parser.o scope.o var.o expand.o
 t-match:  match-t.o  cclass.o bitset.o nfa.o str.o globs.o match.o nfa-dbg.o
 t-fsgen:  fsgen-t.o  cclass.o bitset.o nfa.o str.o globs.o dict.o atom.o match.o fsgen.o
 t-prereq: prereq-t.o str.o prereq.o
-t-rule:   rule-t.o   rule.o str.o dict.o atom.o macro.o parser.o scope.o var.o expand.o
+t-rule:   rule-t.o   rule.o str.o dict.o atom.o macro.o parser.o scope.o var.o expand.o prereq.o
 $(TESTS):
 	$(LINK.c) -o $@ $^
 

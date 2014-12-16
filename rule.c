@@ -7,6 +7,7 @@
 #include "str.h"
 #include "parser.h"
 #include "expand.h"
+#include "prereq.h"
 
 struct rule_parse_ctxt {
 	const str *path;
@@ -248,4 +249,48 @@ rules_parse(struct rule **rp, const struct str *path, struct varscope *scope,
 	rp = rpctxt.rp;
 	
 	return rp;
+}
+
+/* Releases a location structure */
+static void
+location_fini(struct location *location)
+{
+	str_free(location->filename);
+}
+
+/* Releases a list of commands */
+static void
+commands_free(struct command **cp)
+{
+	while (*cp) {
+		struct command *command = *cp;
+		*cp = command->next;
+		location_fini(&command->location);
+		macro_free(command->macro);
+		free(command);
+	}
+}
+
+/* Releases a single rule */
+void
+rule_free(struct rule *rule)
+{
+	location_fini(&rule->location);
+	macro_free(rule->goal.macro);
+	str_free(rule->goal.str);
+	macro_free(rule->depend.macro);
+	prereq_free(rule->depend.prereq);
+	commands_free(&rule->commands);
+	free(rule);
+}
+
+/* Releases a list of rules */
+void
+rules_free(struct rule **rp)
+{
+	while (*rp) {
+		struct rule *rule = *rp;
+		*rp = rule->next;
+		rule_free(rule);
+	}
 }
