@@ -450,5 +450,25 @@ main(void)
 	   "DEFINE A = $(x y,z,q)\n"
 	));
 
+	/* define */
+	assert(parses_to(
+	   "define E\n"
+	   "endef\n"
+	   "define A\n"
+	   "  foo\n"
+	   "  bar\n"
+	   "endef\n"
+	   "define N\n"
+	   " define M\n"
+	   "  foo\n"
+	   " endef\n"
+	   "endef\n"
+	   ,
+	   "DEFINE E = \n"
+	   "DEFINE A = foo\n"
+	   "  bar\n"
+	   "DEFINE N = define M\n  foo\n endef\n"
+	));
+
 	return 0;
 }

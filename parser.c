@@ -541,6 +541,28 @@ again:
 	return 1;
 }
 
+/* read ( \t\n)* into the macro */
+void
+parse_macro_nlsp(struct parser *p, macro **mp)
+{
+	char buf[2048];
+	char *b;
+	int ch;
+
+again:
+	b = buf;
+	while (b < buf + sizeof buf - 2) {
+	    ch = peek(p);
+	    if (!(ch == ' ' || ch == '\t' || ch == '\n'))
+	    	break;
+	    *b++ = next(p);
+	}
+	if (b != buf) {
+	    mp = macro_cons(mp, macro_new_str(str_newn(buf, b - buf)));
+	    goto again;
+	}
+}
+
 /* End any open rule state; and inform the callback if necessary */
 static void
 maybe_end_rule(struct parser *p)
@@ -718,6 +740,12 @@ parse_one(struct parser *p)
 		return 1;
 	}
 
+	unsigned define = 0; /* depth of nested 'define'/'endef' */
+	if (can_read_w(p, "define")) {
+		define = 1;
+		skip_sp(p);
+	}
+
 	/* rule or assignment, read up to a : or = */
 
 	macro *lead = 0;
@@ -729,29 +757,68 @@ parse_one(struct parser *p)
 		return 0;
 	}
 	int ch = peek(p);
-	if (ch == '#' || ch == '\n' || ch == EOF) {
+	if (ch == EOF) {
+		macro_free(lead);
+		return error(p, "unexpected EOF");
+	}
+	if (!define && (ch == '#' || ch == '\n')) {
 		macro_free(lead);
 		return error(p, "missing separator");
 	}
 
 	/* assignment */
 
-	int defch;
+	int defch = 0;
 	if (could_read(p, ":=")) {
-		defch = next(p);
+		defch = next(p); /* ':' */
 		ch = '=';
 	} else if (ch == '=') {
 		defch = macro_erase_last_assign_prefix(lead);
 	}
-	if (ch == '=') {
+	if (define || ch == '=') {
 		macro *text = 0;
 		unsigned lineno = p->lineno;
-		next(p); /* skip '=' */
+		if (ch == '=')
+			next(p); /* skip '=' */
 		skip_sp(p);
 		if (!parse_macro(p, CLOSE_LF | CLOSE_HASH, &text)) {
 			macro_free(text);
 			macro_free(lead);
 			return 0;
+		}
+		if (define) {
+			macro *define_text = 0;
+			macro **mp = &define_text;
+
+			mp = macro_cons(mp, text);
+			text = 0;
+			skip_to_eol(p);
+			while (define) {
+				macro *part = 0;
+				parse_macro_nlsp(p, &part);
+				mp = macro_cons(mp, part);
+				if (define == 1 && can_read_w(p, "endef")) {
+					break;
+				}
+				if (could_read_w(p, "define"))
+					define++;
+				else if (could_read_w(p, "endef"))
+					define--;
+				part = 0;
+				if (!parse_macro(p, CLOSE_LF, &part)) {
+					macro_free(part);
+					macro_free(define_text);
+					macro_free(lead);
+					return 0;
+				}
+				mp = macro_cons(mp, part);
+			}
+			text = define_text;
+			skip_sp(p);
+			if (peek(p) == '#') {
+				skip_to_eol(p);
+			}
+			macro_ltrim(&text);
 		}
 		maybe_end_rule(p);
 		if (enabled && p->cb->define) {
