@@ -1,6 +1,7 @@
 *.d
 t-*
 TAGS
+state
 
 # Object files
 *.o

@@ -4,7 +4,12 @@ CFLAGS = -ggdb -Wall
 
 CFLAGS += -std=gnu99
 
-default: check
+default: check state
+
+OBJS =  atom.o bitset.o cclass.o dict.o expand.o globs.o macro.o main.o \
+	nfa.o parser.o prereq.o pr.o read.o rule.o scope.o str.o var.o
+state: $(OBJS)
+	$(LINK.c) -o $@ $^
 
 TESTS  = t-str t-dict t-atom t-macro t-scope t-parser t-cclass t-bitset t-nfa
 TESTS += t-globs t-vector t-expand t-match t-fsgen t-prereq t-rule
