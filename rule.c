@@ -35,7 +35,8 @@ fput_str(FILE *f, const str *str)
  */
 
 static void
-rule_cb_error(struct parser *p, unsigned lineno, unsigned utf8col, const char *msg)
+rule_cb_error(struct parser *p, unsigned lineno, unsigned utf8col,
+	      const char *msg)
 {
 	struct rule_parse_ctxt *rpctxt = parser_get_context(p);
 
@@ -58,7 +59,8 @@ rule_cb_read(struct parser *p, char *dst, unsigned len)
 }
 
 static void
-rule_cb_define(struct parser *p, macro *lhs, int defkind, macro *text, unsigned lineno)
+rule_cb_define(struct parser *p, macro *lhs, int defkind, macro *text,
+	       unsigned lineno)
 {
 	struct rule_parse_ctxt *rpctxt = parser_get_context(p);
 	struct var *var;
@@ -150,7 +152,8 @@ rule_cb_directive(struct parser *p, atom ident, macro *text, unsigned lineno)
 }
 
 static int
-rule_cb_condition(struct parser *p, int condkind, macro *t1, macro *t2, unsigned lineno)
+rule_cb_condition(struct parser *p, int condkind, macro *t1, macro *t2,
+		  unsigned lineno)
 {
 	struct rule_parse_ctxt *rpctxt = parser_get_context(p);
 	int ret = -1;
@@ -247,7 +250,7 @@ rules_parse(struct rule **rp, const struct str *path, struct varscope *scope,
 
 	parse(&rule_cb, &rpctxt);
 	rp = rpctxt.rp;
-	
+
 	return rp;
 }
 

@@ -113,7 +113,8 @@ cb_read(struct parser *p, char *dst, unsigned len)
 
 
 static void
-cb_define(struct parser *p, macro *lhs, int defkind, macro *text, unsigned lineno)
+cb_define(struct parser *p, macro *lhs, int defkind, macro *text,
+	  unsigned lineno)
 {
 	struct cb_context *context = parser_get_context(p);
 
@@ -148,7 +149,8 @@ cb_directive(struct parser *p, atom ident, macro *text, unsigned lineno)
 }
 
 static int
-cb_condition(struct parser *p, int condkind, macro *t1, macro *t2, unsigned lineno)
+cb_condition(struct parser *p, int condkind, macro *t1, macro *t2,
+	     unsigned lineno)
 {
 	struct cb_context *context = parser_get_context(p);
 	switch (condkind) {

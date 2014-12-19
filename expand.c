@@ -14,7 +14,8 @@
  * If FROM is empty string, then simply append TO to the end of TEXT
  */
 static str **
-func_subst(str **x, unsigned argc, const str **args, const struct varscope *scope)
+func_subst(str **x, unsigned argc, const str **args, 
+	   const struct varscope *scope)
 {
 	const str *FROM = args[1];
 	const str *TO = args[2];
@@ -92,7 +93,8 @@ find_func(atom name)
  * @param args all arguments (including a string copy of arg0)
  */
 static str **
-expand_apply(str **x, atom arg0, unsigned argc, const str **args, const struct varscope *scope)
+expand_apply(str **x, atom arg0, unsigned argc, const str **args,
+	     const struct varscope *scope)
 {
 	if (argc > 1) {
 		func_t func = find_func(arg0);

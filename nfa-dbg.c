@@ -92,7 +92,8 @@ nfa_dump(FILE *file, const struct nfa *nfa, int current_state)
 			fprintf(file, "\t\tF={");
 			for (j = 0; j < n->nfinals; ++j) {
 				if (j) putc(' ', file);
-				fprintf(file, "\"%s\"", (const char *)n->finals[j]);
+				fprintf(file, "\"%s\"",
+					(const char *)n->finals[j]);
 			}
 			putc('}', file);
 		}

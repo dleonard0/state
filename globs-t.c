@@ -8,7 +8,8 @@
 #include "str.h"
 #include "nfa-dbg.h"
 
-static void assert_match_(const char *file, int lineno, int expect_accept, const char *globexp, ...)
+static void assert_match_(const char *file, int lineno, int expect_accept,
+			  const char *globexp, ...)
 	__attribute__((sentinel));
 #define assert_accepts(...) assert_match_(__FILE__,__LINE__,1,__VA_ARGS__,NULL)
 #define assert_rejects(...) assert_match_(__FILE__,__LINE__,0,__VA_ARGS__,NULL)
@@ -25,7 +26,8 @@ globs_dump(const struct globs *g, const char *gexp, int state)
 }
 
 static void
-assert_match_(const char *file, int lineno, int expect_accept, const char *globexp, ...)
+assert_match_(const char *file, int lineno, int expect_accept,
+	      const char *globexp, ...)
 {
 	va_list ap;
 	const char *text;
@@ -124,7 +126,8 @@ main()
 				NOT, "", "d", "abc", "a|b|c");
 		assert_accepts("@(a)", "a",
 				NOT, "", "aa");
-		assert_accepts("foo*bar", "foobar", "foo-bar", "foofoobar", "foobarbar",
+		assert_accepts("foo*bar", "foobar", "foo-bar", "foofoobar",
+				"foobarbar",
 				NOT, "foo", "bar", "fobar", "fbar", "foo/bar");
 		assert_accepts("?(@(a|b)|c)", "", "a", "b", "c",
 				NOT, "ac", "d");

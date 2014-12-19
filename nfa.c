@@ -252,7 +252,8 @@ unsigned_cmp(const void *a, const void *b)
  * @return the array of breakpoints.
  */
 static unsigned *
-cclass_breaks(const struct nfa *nfa, const bitset *nodes, unsigned *nbreaks_return)
+cclass_breaks(const struct nfa *nfa, const bitset *nodes,
+	      unsigned *nbreaks_return)
 {
 	unsigned ni;
 	unsigned i, j;
@@ -372,22 +373,25 @@ make_dfa(struct nfa *dfa, const struct nfa *nfa)
 			 * membership of lo. */
 			bitset *dest = bitset_alloca(nfa->nnodes);
 			bitset_for(ni, src) {
-				const struct node *n = &nfa->nodes[ni];
-				for (j = 0; j < n->nedges; ++j) {
-					if (n->edges[j].cclass &&
-					    cclass_contains_ch(n->edges[j].cclass, lo))
-					{
-						bitset_insert(dest, n->edges[j].dest);
-					}
+			    const struct node *n = &nfa->nodes[ni];
+			    for (j = 0; j < n->nedges; ++j) {
+				if (n->edges[j].cclass &&
+				    cclass_contains_ch(n->edges[j].cclass, lo))
+				{
+				    bitset_insert(dest, n->edges[j].dest);
 				}
+			    }
 			}
-			/* Expand the resulting dest set to its epsilon closure */
+			/* Expand the resulting dest set to its
+			 * epsilon closure */
 			epsilon_closure(nfa, dest);
 
-			/* Find or make di, the DFA equivalent node for {dest} */
+			/* Find or make di, the DFA equivalent
+			 * node for {dest} */
 			di = equiv_lookup(dfa, &equiv, dest);
 
-			/* (Recompute pointers here because nodes may have been realloced) */
+			/* (Recompute pointers here because nodes may have
+			 *  been realloced) */
 			en = &dfa->nodes[ei];
 
 			/* Create or find an existing edge from ei->di */

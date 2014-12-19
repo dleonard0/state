@@ -214,7 +214,8 @@ cclass_invert(cclass *cc)
 			cc->interval[j].lo = lasthi;
 			cc->interval[j].hi = MAXCHAR;
 		} else {
-			cclass_insert_before(cc, cc->nintervals, lasthi, MAXCHAR);
+			cclass_insert_before(cc, cc->nintervals,
+				lasthi, MAXCHAR);
 		}
 		j++;
 	}

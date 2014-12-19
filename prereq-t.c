@@ -87,7 +87,8 @@ prereq_tostr_(const struct prereq *p, char **s)
 	assert_prereq_eq_(__FILE__, __LINE__, p, expected)
 
 static void
-assert_prereq_eq_(const char *file, unsigned lineno, const struct prereq *p, const char *expected)
+assert_prereq_eq_(const char *file, unsigned lineno,
+		  const struct prereq *p, const char *expected)
 {
 	char actual[2048];
 	char *s = actual;

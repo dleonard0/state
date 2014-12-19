@@ -15,7 +15,7 @@ static const char *prefix[] = {
 };
 
 void
-prl_(const char *file, int line, enum verbosity level, 
+prl_(const char *file, int line, enum verbosity level,
 	const struct location *loc, const char *fmt, ...)
 {
 	va_list ap;
@@ -23,7 +23,7 @@ prl_(const char *file, int line, enum verbosity level,
 	if (loc) {
 		char path[1024];
 		unsigned pathlen;
-		
+
 		pathlen = str_copy(loc->filename, path, 0, sizeof path);
 		fprintf(stderr, "%.*s:%u: ", pathlen, path, loc->lineno);
 	}
