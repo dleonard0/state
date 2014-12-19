@@ -1,7 +1,7 @@
 #ifndef rule_h
 #define rule_h
 
-/* State transition rules */
+/* A state transition rules */
 
 struct str;
 struct macro;
@@ -15,14 +15,14 @@ struct location {
 	unsigned lineno;
 };
 
-/* A command line within a transition rule */
+/** A command line within a transition rule. */
 struct command {
 	struct command *next;
 	struct location location;
 	struct macro *macro;
 };
 
-/* A rule within a rules file */
+/** A rule within a rules file. */
 struct rule {
 	struct rule *next;
 	struct location location;	/* where the rule was defined */

@@ -4,24 +4,28 @@
 #include <string.h>
 #include <stdlib.h>
 
-/** A compact set representation using bits */
 typedef unsigned _bitset_word;
+
+/**
+ * A bitset is a compact integer set representation using bits.
+ */
 typedef struct bitset {
-	unsigned nbits;		/**< number of valid bits in the array */
-	_bitset_word bits[1];	/**< packed bit store; overallocated */
+	unsigned nbits;		/**< Number of valid bits in the array */
+	_bitset_word bits[1];	/**< Packed bit store; overallocated */
 } bitset;
 
-/* Round up to the next multiple of div */
+/* (Rounds n up to the next multiple of div) */
 static inline unsigned roundup(unsigned n, unsigned div) {
 	unsigned rem = n % div;
 	return rem ? n - rem + div : n;
 }
 
+/* (Compute the word to use for a given shift, safely) */
 static inline _bitset_word _bitset_bit(unsigned shift) {
 	return (_bitset_word)1U << shift;
 }
 
-/* (Number of valid array elements in bits[] given nbits */
+/* (Number of valid array elements in bits[] given nbits) */
 static inline unsigned _bitset_nelem(unsigned nbits) {
 	return roundup(nbits, 8 * sizeof (_bitset_word)) /
 			     (8 * sizeof (_bitset_word));
@@ -51,15 +55,16 @@ bitset *bitset_new(unsigned nbits);
 /** Allocates a copy of a bitset */
 bitset *bitset_dup(const bitset *a);
 
-/** (Initialize dup with a copy of a) */
+/** (Initializes dup with a copy of a) */
 bitset *_bitset_init_dup(bitset *dup, const bitset *a);
 
 /** Releases a bitset allocated with bitset_new() */
 void bitset_free(bitset *a);
 
-/** Allocate an empty bitset on the stack */
+/** Allocates an empty bitset on the stack */
 #define bitset_alloca(nbits) \
 	_bitset_init(alloca(_bitset_size(nbits)), nbits)
+/** Allocates a bitset on the stack, initialized to @a bs */
 #define bitset_alloca_copy(bs) \
 	_bitset_init_dup(alloca(_bitset_size((bs)->nbits)), bs)
 
@@ -123,14 +128,15 @@ static inline int bitset_is_empty(const bitset *s) {
 	return 1;
 }
 
-/* iterate i over bs */
+/** Iterates integer variable @a i over members of set @a bs. */
 #define bitset_for(i, bs) for ((i) = _bitset_next(bs, 0); \
 			       (i) < (bs)->nbits; \
 			       (i) = _bitset_next(bs, (i) + 1))
+
 /* (Finds the next member in s with value >= i, or returns nbits) */
 unsigned _bitset_next(const bitset *s, unsigned i);
 
-/* Count the number of elements in the bitset */
+/** Counts the number of elements in the bitset. */
 unsigned bitset_count(const bitset *s);
 
 #endif /* bitset_h */

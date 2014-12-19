@@ -3,7 +3,7 @@
 
 struct str;
 
-/*
+/**
  * A prerequisite expression tree.
  */
 struct prereq {

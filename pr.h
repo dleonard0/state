@@ -1,12 +1,12 @@
 #ifndef pr_h
 #define pr_h
 
-struct location;
+/** A level of verbosity */
 extern enum verbosity {
-	V_ERROR = 0,	/* errors only */
-	V_WARNING,	/* errors+warnings (default) */
-	V_VERBOSE,	/* errors+warnings+verbose */
-	V_DEBUG		/* errors+warnings+verbose+debug */
+	V_ERROR = 0,	/**< errors only */
+	V_WARNING,	/**< errors+warnings (default) */
+	V_VERBOSE,	/**< errors+warnings+verbose */
+	V_DEBUG		/**< errors+warnings+verbose+debug */
 } verbosity;
 
 /*
@@ -26,6 +26,7 @@ extern enum verbosity {
 #define prl_verbose(l, ...)	prl(V_VERBOSE, l, __VA_ARGS__)
 #define prl_debug(l, ...)	prl(V_DEBUG,   l, __VA_ARGS__)
 
+struct location;	/* forward decl */
 
 #define prl(level, loc, ...)	do { 				\
 	const enum verbosity _v = (level);			\

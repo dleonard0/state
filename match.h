@@ -1,9 +1,11 @@
 #ifndef match_h
 #define match_h
 
-/*
- * A matcher object coordinates the output of a string generator with
- * the selective filtering of a glob set. The intended use of this is
+#include "str.h"	/* stri */
+
+/**
+ * A matcher object coordinates the output of a string #generator with
+ * the selective filtering of a #glob pattern set. The intended use of this is
  * to lazily match glob patterns against paths in a filesystem.
  *
  * The string generators are allowed to produce incomplete strings (called
@@ -77,10 +79,9 @@
  * A undeferred member string successfully reaching an accept state is then
  * removed from the list, and returned as a result from #matcher_next().
  */
+struct matcher;
 
-#include "str.h"	/* stri */
-
-struct globs;
+struct globs; /* forward decl */
 
 /**
  * A match is a partially-matched candidate string.
@@ -88,35 +89,39 @@ struct globs;
  */
 struct match {
 	struct match *next;
-	str *str;		/* candidate string, UTF-8 encoded (owned) */
+	str *str;		/**< candidate string, UTF-8 encoded (owned) */
 	unsigned flags;
-#define MATCH_DEFERRED	1	/* flags: generator can yield more strings */
-	stri stri;		/* position of next character to match */
-	unsigned state;		/* current match state */
+#define MATCH_DEFERRED	1	/**< flags: generator can yield more strings */
+	stri stri;		/**< position of next character to match */
+	unsigned state;		/**< current match state */
 };
 
 /**
  * Allocates a new match structure.
- * Only the flags and str fields are initialized.
+ * Only the #match.flags and #match.str fields are initialized.
+ *
  * @param str  the UTF-8 string in the match (TAKEN)
+ *
+ * @returns a new match structure, partially initialized.
  */
 struct match *match_new(str *str);
 
 /**
- * Deallocates a match structure
+ * Deallocates a match structure.
+ *
+ * @param match the match structure to release
  */
 void          match_free(struct match *match);
 
 /**
- * This is the callback interface that provides candidate strings
- * to the matcher.
+ * A callback interface that provides candidate strings to the #matcher.
  */
 struct generator {
 	/**
-	 * Main callback function that provides a list of candidate
-	 * strings to the matcher.
+	 * Provides a list of candidate strings to the matcher. This
+	 * is the main callback interface.
 	 *
-	 * The function should allocate #match structures with #match_new(),
+	 * This function should allocate #match structures with #match_new(),
 	 * chain them via their #match.next fields, and insert them
 	 * into the list indicated by the @a mp parameter.
 	 *
@@ -141,6 +146,7 @@ struct generator {
 	 *                or the empty string (@c NULL).
 	 * @param gcontext The generator context argument given to
 	 *                #matcher_new().
+	 *
 	 * @return address of last #match.next field or @a mp
 	 */
 	struct match ** (*generate)(struct match **mp,
@@ -150,6 +156,7 @@ struct generator {
 	 * Releases the context pointer passed to #matcher_new().
 	 * This is called by #matcher_free().
 	 * This function pointer may be left as @c NULL.
+	 *
 	 * @param gcontext The generator context argument given to
 	 *                #matcher_new().
 	 */
@@ -157,18 +164,15 @@ struct generator {
 };
 
 
-/*
- * A matcher coordinates generators and globs, allowing incremental
- * searching of a generated string space against a globset.
- */
-struct matcher;
-
 /**
  * Allocates a new matcher, which can be used to filter a generated
  * string space.
+ *
  * @param globs      a compiled set of glob patterns.
  * @param generator  interface for obtaining new candidate strings
  * @param gcontext   context pointer for the generator
+ *
+ * @returns the new matcher
  */
 struct matcher *matcher_new(const struct globs *globs,
 			    const struct generator *generator,
@@ -177,8 +181,11 @@ struct matcher *matcher_new(const struct globs *globs,
 /**
  * Searches the generated string space to find the string that matches
  * a pattern from the globset.
+ *
+ * @param matcher     The matcher that is currently matching.
  * @param ref_return  Optional pointer to storage where to
  *                    store the glob's associated reference.
+ *
  * @returns the UTF-8 str that matched (caller must free this string),
  *          or @c NULL when the generator is exhausted.
  */
@@ -186,6 +193,8 @@ str *matcher_next(struct matcher *matcher, const void **ref_return);
 
 /**
  * Releases storage associated with a matcher.
+ *
+ * @param matcher The matcher to release.
  */
 void matcher_free(struct matcher *matcher);
 

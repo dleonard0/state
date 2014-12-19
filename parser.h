@@ -20,7 +20,7 @@
 
 /* Values of 'condkind' in the condition() callback */
 #define CONDKIND_IFDEF		'd'
-#define CONDKIND_IFEQ	  	'='
+#define CONDKIND_IFEQ		'='
 
 /**
  * The parser context is provided during the #parse() call
@@ -34,9 +34,11 @@ struct parser_cb {
 	 * Called by parser to obtain some raw data to parse.
 	 * This is expected to behave pretty much like the read()
 	 * system call.
+	 *
 	 * @param p   parser context
 	 * @param dst destination buffer
 	 * @param len maximum number of UTF-8 bytes to read
+	 *
 	 * @return number of bytes copied into dst, or
 	 *         0 at EOF, or
 	 *         -1 if there was an error
@@ -49,6 +51,7 @@ struct parser_cb {
 	 * Called by parser to notify that a variable definition has been
 	 * encountered.
 	 * This event may happen anywhere.
+	 *
 	 * @param p       parser context
 	 * @param lhs     the left-hand-side being defined,
 	 *		  having been trimmed of whitespace.
@@ -66,6 +69,7 @@ struct parser_cb {
 	 * Called by parser to notify that a .directive line has
 	 * been encountered.
 	 * This event may happen anywhere.
+	 *
 	 * @param p       parser context
 	 * @param ident   the directive (excludes the '.')
 	 * @param text    the line of text which must be TAKEN or freed
@@ -79,6 +83,7 @@ struct parser_cb {
 	/**
 	 * Called by the parser to evaluate an 'if' conditional.
 	 * This request may be made at any time.
+	 *
 	 * @param p        parser context
 	 * @param condkind the kind of conditional (#CONDKIND_IFDEF etc)
 	 * @param t1       the text following the condition,
@@ -86,7 +91,8 @@ struct parser_cb {
 	 * @param t2       the other text following the condition,
 	 *                 must be TAKEN or freed
 	 * @param lineno   line number of the condition
-	 * @returns true if the condition is true.
+	 *
+	 * @returns true (non-zero) if the condition is true.
 	 *
 	 * Default behaviour: macro_free(t1); macro_free(t2); return 0;
 	 */
@@ -97,6 +103,7 @@ struct parser_cb {
 	 * Called when a rule "goal: depends" starts.
 	 * It will eventually be followed by a call to #end_rule().
 	 * Rules do not nest.
+	 *
 	 * @param p       parser context
 	 * @param goal    the goal text,
 	 *                must be TAKEN or freed
@@ -112,6 +119,7 @@ struct parser_cb {
 	/**
 	 * Called when a command line is encountered.
 	 * This is only ever called within a rule.
+	 *
 	 * @param p      parser context
 	 * @param text   the command line, without leading TAB character,
 	 *               must be TAKEN or freed
@@ -123,6 +131,7 @@ struct parser_cb {
 
 	/**
 	 * Called when the end of a rule has been detected.
+	 *
 	 * @param p    parser context
 	 *
 	 * Default behaviour: nothing
@@ -131,9 +140,11 @@ struct parser_cb {
 
 	/**
 	 * Called when there is an unrecoverable parse error.
+	 *
 	 * @param lineno  the line number of the error
 	 * @param utf8col the column of the error (starting at 1)
 	 * @param msg     error text
+	 *
 	 * Default behaviour: nothing.
 	 */
 	void (*error)(struct parser *p, unsigned lineno,
@@ -141,14 +152,16 @@ struct parser_cb {
 };
 
 /**
- * Parses some input to completion.
+ * Parses some input, reading it to completion.
  * The parser will invoke methods on @a cb to obtain
- * text, and then to inform the cb of parse events.
+ * text, and then call other @a cb methods to inform it
+ * of parse events.
  *
  * Parsing stops after cb->read() returns 0 or a negative number.
  *
  * @param cb   callback handler for handling parse events.
  * @param read a function that is used to supply a UTF-8 stream.
+ *
  * @returns the same value as the last call to cb->read().
  */
 int parse(const struct parser_cb *cb, void *context);

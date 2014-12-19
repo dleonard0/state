@@ -5,10 +5,12 @@
 #include "cclass.h"
 
 /**
- * A graph structure intended for use as an NFA or DFA.
+ * A (non-)deterministic finite automaton.
+ * This is a graph structure that can be used for an NFA or DFA.
  * Each graph is a set of nodes (possible states) each with
  * a set of character class edges to other nodes.
  * DFAs are guaranteed to have the properties of:
+ *
  *   - no epsilon edges (edge.cclass != NULL)
  *   - unique edges for any character
  *     (the edge.cclass do not overlap).
@@ -31,16 +33,35 @@ struct nfa {
 };
 
 
-/** Initializes existing graph storage. Release with #nfa_fini() */
+/**
+ * Initializes existing graph storage. 
+ * The nfa must later be finialized by passing it to #nfa_fini().
+ *
+ * @param nfa	the nfa to initialize to empty
+ *
+ * @returns the same @a nfa
+ */
 struct nfa *	nfa_init(struct nfa *nfa);
 
-/** Releases content of an initialized graph structure */
+/**
+ * Releases content of an initialized graph structure.
+ *
+ * @param nfa	an nfa that had been initialied by #nfa_init().
+ */
 void		nfa_fini(struct nfa *nfa);
 
-/** Allocates a new graph structure. Release with #nfa_free(). */
+/**
+ * Allocates and initializes a new, empty graph structure.
+ *
+ * @returns an nfa that must eventually be released by #nfa_free().
+ */
 struct nfa *	nfa_new(void);
 
-/** Releases all store associated with the graph structure */
+/**
+ * Releases all storage associated with an nfa.
+ *
+ * @param nfa	an nfa obtained from #nfa_new().
+ */
 void		nfa_free(struct nfa *nfa);
 
 /** Adds a new, empty node to the graph.
@@ -48,9 +69,9 @@ void		nfa_free(struct nfa *nfa);
 unsigned	nfa_new_node(struct nfa *nfa);
 
 /**
- * Appends a pointer value to a node's #node.finals array.
- * Final values are handy for automaton users that want
- * to associate some states with differnt kinds of
+ * Adds a value to a node's #node.finals array.
+ * These values are handy for automaton users that need
+ * to associate some accept states with differnt kinds of
  * accept status.
  *
  * @param g     the graph containing the node
@@ -79,8 +100,9 @@ struct edge *nfa_new_edge(struct nfa *nfa, unsigned from, unsigned to);
 
 /**
  * Converts a non-deterministic graph into a deterministic one.
- * @param dfa   where to store the deterministc graph
- * @param input the (non-deterministic) input graph
+ * The conversion is performed in-place.
+ *
+ * @param nfa   the graph to make deterministic.
  */
 void nfa_to_dfa(struct nfa *nfa);
 

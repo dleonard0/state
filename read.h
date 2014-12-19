@@ -3,6 +3,7 @@
 
 struct str;
 
+/* Interface to read a state rules file. */
 struct reader {
 	/** Opens the file named by @a path; @returns an rctxt */
 	void * (*open)(void *fctxt, const struct str *path);
