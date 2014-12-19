@@ -106,6 +106,11 @@ assert_prereq_eq_(const char *file, unsigned lineno, const struct prereq *p, con
 	}
 }
 
+/*
+ * Checks that the prerequisite expression will be parsed
+ * into a structure, and then unparsed back into a standard form
+ * that should be the same.
+ */
 #define check_prereq(source) check_prereq_(__FILE__, __LINE__, source)
 static void
 check_prereq_(const char *file, unsigned lineno, const char *source)
@@ -123,9 +128,9 @@ check_prereq_(const char *file, unsigned lineno, const char *source)
 	prereq_free(p);
 }
 
-#define fail_parse(source) fail_parse_(__FILE__, __LINE__, source)
+#define assert_parse_fail(source) assert_parse_fail_(__FILE__, __LINE__, source)
 static void
-fail_parse_(const char *file, unsigned lineno, const char *source)
+assert_parse_fail_(const char *file, unsigned lineno, const char *source)
 {
 	STR source_str = str_new(source);
 	const char *error = 0;
@@ -153,12 +158,14 @@ main()
 	check_prereq("{}");
 	check_prereq("()");
 	check_prereq("");
+	check_prereq("a b c");
+	check_prereq("!!a");
 	check_prereq("(a b) c");
 	check_prereq("(a {x y (i)} x) c");
-	fail_parse(")");
-	fail_parse("{");
-	fail_parse("a (");
-	fail_parse("(x}");
+	assert_parse_fail(")");
+	assert_parse_fail("{");
+	assert_parse_fail("a (");
+	assert_parse_fail("(x}");
 
 	return 0;
 }
