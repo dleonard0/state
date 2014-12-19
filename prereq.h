@@ -9,15 +9,22 @@ struct str;
 struct prereq {
 	enum prereq_type {
 		PR_STATE,		/* dir@ident */
-		PR_ANY,			/* { P ... } */
 		PR_ALL,			/* ( P ... ) */
+		PR_TRUE,		/* () */
+		PR_ANY,			/* { ... P } */
+		PR_FALSE,		/* {} */
 		PR_NOT,			/* ! P */
 	} type;
-	struct prereq *next;		/* sibling list */
 	union {
 		struct str *state;
-		struct prereq *any;
-		struct prereq *all;
+		struct {
+			struct prereq *left;
+			struct prereq *right;	/* rest of the (list) */
+		} all;
+		struct {
+			struct prereq *left;	/* lead of the {list} */
+			struct prereq *right;
+		} any;
 		struct prereq *not;
 	};
 };

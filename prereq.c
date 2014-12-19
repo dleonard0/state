@@ -9,14 +9,14 @@ struct context {
 	const char *error;
 };
 
-static struct prereq * parse_list(struct context *ctxt);
+static struct prereq * parse_all_list(struct context *ctxt);
+static struct prereq * parse_any_list(struct context *ctxt);
 
 static struct prereq *
 prereq_new(enum prereq_type type)
 {
 	struct prereq *p = malloc(sizeof *p);
 	p->type = type;
-	p->next = 0;
 	return p;
 }
 
@@ -71,38 +71,30 @@ static struct prereq *
 parse_term(struct context *ctxt)
 {
 	struct prereq *p;
-	unsigned ch;
 
 	skipwhite(ctxt);
 	if (canconsume(ctxt, "!")) {
 		struct prereq *not = parse_term(ctxt);
-		if (not && not->type == PR_NOT) {
-			/* double negative */
-			p = not->not;
-			not->not = 0;
-			prereq_free(not);
-			return p;
-		}
 		p = prereq_new(PR_NOT);
 		p->not = not;
 		return p;
 	}
 
-	if ((ch = canconsume(ctxt, "({"))) {
-		struct prereq *list = parse_list(ctxt);
-		const char * closech;
-		if (ch == '(') {
-			p = prereq_new(PR_ALL);
-			p->all = list;
-			closech = ")";
-		} else {
-			p = prereq_new(PR_ANY);
-			p->any = list;
-			closech = "}";
-		}
-		if (!canconsume(ctxt, closech)) {
+	if (canconsume(ctxt, "(")) {
+		p = parse_all_list(ctxt);
+		if (!canconsume(ctxt, ")")) {
 			if (!ctxt->error) {
-				ctxt->error = "missing closing ) or }";
+				ctxt->error = "missing closing )";
+			}
+		}
+		return p;
+	}
+
+	if (canconsume(ctxt, "{")) {
+		p = parse_any_list(ctxt);
+		if (!canconsume(ctxt, "}")) {
+			if (!ctxt->error) {
+				ctxt->error = "missing closing }";
 			}
 		}
 		return p;
@@ -125,21 +117,39 @@ parse_term(struct context *ctxt)
 }
 
 static struct prereq *
-parse_list(struct context *ctxt)
+parse_all_list(struct context *ctxt)
 {
-	struct prereq *ret, **lastp = &ret;
-
+	struct prereq *ret = 0, **pp = &ret;
 	for (;;) {
 		skipwhite(ctxt);
 		if (!stri_more(ctxt->i))
 			break;
 		if (couldconsume(ctxt, ")}"))
 			break;
-		struct prereq *p = parse_term(ctxt);
-		*lastp = p;
-		lastp = &p->next;
+		*pp = prereq_new(PR_ALL);
+		(*pp)->all.left = parse_term(ctxt);
+		pp = &(*pp)->all.right;
 	}
-	*lastp = 0;
+	*pp = prereq_new(PR_TRUE);
+	return ret;
+}
+
+static struct prereq *
+parse_any_list(struct context *ctxt)
+{
+	struct prereq *ret = prereq_new(PR_FALSE);
+	struct prereq *p;
+	for (;;) {
+		skipwhite(ctxt);
+		if (!stri_more(ctxt->i))
+			break;
+		if (couldconsume(ctxt, ")}"))
+			break;
+		p = prereq_new(PR_ANY);
+		p->any.left = ret;
+		p->any.right = parse_term(ctxt);
+		ret = p;
+	}
 	return ret;
 }
 
@@ -151,8 +161,7 @@ prereq_make(const struct str *str, const char **error)
 	ctxt.i = stri_str(str);
 	ctxt.error = 0;
 
-	p = prereq_new(PR_ALL);
-	p->all = parse_list(&ctxt);
+	p = parse_all_list(&ctxt);
 
 	if (!ctxt.error) {
 		/* check for extraneous characters */
@@ -173,23 +182,27 @@ prereq_make(const struct str *str, const char **error)
 void
 prereq_free(struct prereq *p)
 {
-	struct prereq *next = p;
-	while ((p = next)) {
+	if (p) {
 		switch (p->type) {
 		case PR_STATE:
 			str_free(p->state);
 			break;
 		case PR_ANY:
-			prereq_free(p->any);
+			prereq_free(p->any.left);
+			prereq_free(p->any.right);
 			break;
 		case PR_ALL:
-			prereq_free(p->any);
+			prereq_free(p->all.left);
+			prereq_free(p->all.right);
 			break;
 		case PR_NOT:
-			prereq_free(p->any);
+			prereq_free(p->not);
+			break;
+		case PR_TRUE:
+			break;
+		case PR_FALSE:
 			break;
 		}
-		next = p->next;
 		free(p);
 	}
 }
