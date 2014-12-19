@@ -22,10 +22,10 @@ nfa_fini(struct nfa *nfa)
 	unsigned i, j;
 	for (i = 0; i < nfa->nnodes; i++) {
 		struct node *n = &nfa->nodes[i];
-		for (j = 0; j < n->ntrans; ++j) {
-			cclass_free(n->trans[j].cclass);
+		for (j = 0; j < n->nedges; ++j) {
+			cclass_free(n->edges[j].cclass);
 		}
-		free(n->trans);
+		free(n->edges);
 		free(n->finals);
 	}
 	free(nfa->nodes);
@@ -67,19 +67,19 @@ nfa_new_node(struct nfa *nfa)
 	return i;
 }
 
-struct transition *
-nfa_new_trans(struct nfa *nfa, unsigned from, unsigned to)
+struct edge *
+nfa_new_edge(struct nfa *nfa, unsigned from, unsigned to)
 {
 	struct node *n = &nfa->nodes[from];
-	struct transition *trans;
-	if (n->ntrans % TRANSINC == 0) {
-		n->trans = realloc(n->trans,
-			(n->ntrans + TRANSINC) * sizeof *n->trans);
+	struct edge *edge;
+	if (n->nedges % TRANSINC == 0) {
+		n->edges = realloc(n->edges,
+			(n->nedges + TRANSINC) * sizeof *n->edges);
 	}
-	trans = &n->trans[n->ntrans++];
-	trans->cclass = 0;
-	trans->dest = to;
-	return trans;
+	edge = &n->edges[n->nedges++];
+	edge->cclass = 0;
+	edge->dest = to;
+	return edge;
 }
 
 void
@@ -101,16 +101,16 @@ nfa_add_final(struct nfa *nfa, unsigned i, const void *final)
 }
 
 static int
-transition_is_epsilon(const struct transition *t)
+edge_is_epsilon(const struct edge *edge)
 {
-	return !t->cclass;
+	return !edge->cclass;
 }
 
 /*
  * Compute the epsilon-closure of the set s.
- * That's all the states reachable through zero or more epsilon transitions
+ * That's all the states reachable through zero or more epsilon edges
  * in nfa from any of the states in s.
- * @param nfa the graph with the epsilon transitions
+ * @param nfa the graph with the epsilon edges
  * @param s the set to expand to epsilon closure
  */
 void
@@ -118,18 +118,18 @@ epsilon_closure(const struct nfa *nfa, bitset *s)
 {
 	unsigned ni, j;
 	struct node *n;
-	struct transition *t;
+	struct edge *e;
 	bitset *tocheck = bitset_dup(s);
 
 	while (!bitset_is_empty(tocheck)) {
 		bitset_for(ni, tocheck) {
 			n = &nfa->nodes[ni];
 			bitset_remove(tocheck, ni);
-			for (j = 0; j < n->ntrans; ++j) {
-				t = &n->trans[j];
-				if (transition_is_epsilon(t)) {
-					if (bitset_insert(s, t->dest)) {
-						bitset_insert(tocheck, t->dest);
+			for (j = 0; j < n->nedges; ++j) {
+				e = &n->edges[j];
+				if (edge_is_epsilon(e)) {
+					if (bitset_insert(s, e->dest)) {
+						bitset_insert(tocheck, e->dest);
 					}
 				}
 			}
@@ -235,7 +235,7 @@ unsigned_cmp(const void *a, const void *b)
 }
 
 /*
- * Construct the break set of all transitions in all the
+ * Construct the break set of all edges in all the
  * given nodes.
  * For example, the cclasses [p-y] and [pt] expand to the
  * interval ranges:
@@ -261,8 +261,8 @@ cclass_breaks(const struct nfa *nfa, const bitset *nodes, unsigned *nbreaks_retu
 	unsigned nintervals = 0;
 	bitset_for(ni, nodes) {
 		const struct node *n = &nfa->nodes[ni];
-		for (j = 0; j < n->ntrans; ++j) {
-			const cclass *cc = n->trans[j].cclass;
+		for (j = 0; j < n->nedges; ++j) {
+			const cclass *cc = n->edges[j].cclass;
 			if (cc) {
 				nintervals += cc->nintervals;
 			}
@@ -281,8 +281,8 @@ cclass_breaks(const struct nfa *nfa, const bitset *nodes, unsigned *nbreaks_retu
 	unsigned nbreaks = 0;
 	bitset_for(ni, nodes) {
 		const struct node *n = &nfa->nodes[ni];
-		for (j = 0; j < n->ntrans; ++j) {
-			const cclass *cc = n->trans[j].cclass;
+		for (j = 0; j < n->nedges; ++j) {
+			const cclass *cc = n->edges[j].cclass;
 			if (cc) {
 				for (i = 0; i < cc->nintervals; ++i) {
 					breaks[nbreaks++] = cc->interval[i].lo;
@@ -314,8 +314,8 @@ cclass_breaks(const struct nfa *nfa, const bitset *nodes, unsigned *nbreaks_retu
 
 /*
  * Constructs a deterministic automaton that simulates the
- * input nfa, but only has deterministic transitions (that is
- * each node has only 0 or 1 transitions for any character).
+ * input nfa, but only has deterministic edges (that is
+ * each node has only 0 or 1 edges for any character).
  * @param dfa an empty graph into which to store the DFA
  * @param nfa the input (non-deterministic) graph
  */
@@ -350,13 +350,13 @@ make_dfa(struct nfa *dfa, const struct nfa *nfa)
 		 * the current DFA node ei */
 		src = equiv_get(&equiv, ei);
 
-		/* We want to combine all the transition cclasses
+		/* We want to combine all the edge cclasses
 		 * of src together, and then efficiently walk over
 		 * their members.
 		 * The breaks list speeds this up because if
 		 * characters c1,c2 appear adjacent in the breaks list,
 		 * then we can reason that for any cclass in any src
-		 * transitions, either:
+		 * edges, either:
 		 *   [c1,c2) is wholly within that cclass
 		 *   [c1,c2) is wholly outside that cclass
 		 */
@@ -367,17 +367,17 @@ make_dfa(struct nfa *dfa, const struct nfa *nfa)
 			unsigned ni, di, j;
 
 			/* Find the set of NFA states, dest, to which
-			 * the cclass [lo,hi) transitions to from the
+			 * the cclass [lo,hi) edges to from the
 			 * src set. We can do this by just checking for
 			 * membership of lo. */
 			bitset *dest = bitset_alloca(nfa->nnodes);
 			bitset_for(ni, src) {
 				const struct node *n = &nfa->nodes[ni];
-				for (j = 0; j < n->ntrans; ++j) {
-					if (n->trans[j].cclass &&
-					    cclass_contains_ch(n->trans[j].cclass, lo))
+				for (j = 0; j < n->nedges; ++j) {
+					if (n->edges[j].cclass &&
+					    cclass_contains_ch(n->edges[j].cclass, lo))
 					{
-						bitset_insert(dest, n->trans[j].dest);
+						bitset_insert(dest, n->edges[j].dest);
 					}
 				}
 			}
@@ -390,21 +390,21 @@ make_dfa(struct nfa *dfa, const struct nfa *nfa)
 			/* (Recompute pointers here because nodes may have been realloced) */
 			en = &dfa->nodes[ei];
 
-			/* Create or find an existing transition from ei->di */
-			struct transition *t = NULL;
-			for (j = 0; j < en->ntrans; ++j) {
-				if (en->trans[j].dest == di) {
-					t = &en->trans[j];
+			/* Create or find an existing edge from ei->di */
+			struct edge *e = NULL;
+			for (j = 0; j < en->nedges; ++j) {
+				if (en->edges[j].dest == di) {
+					e = &en->edges[j];
 					break;
 				}
 			}
-			if (!t) {
-				t = nfa_new_trans(dfa, ei, di);
-				t->cclass = cclass_new();
+			if (!e) {
+				e = nfa_new_edge(dfa, ei, di);
+				e->cclass = cclass_new();
 			}
 
-			/* Add the transition along [lo,hi) into the DFA */
-			cclass_add(t->cclass, lo, hi);
+			/* Add the edge along [lo,hi) into the DFA */
+			cclass_add(e->cclass, lo, hi);
 		}
 		free(breaks);
 	}

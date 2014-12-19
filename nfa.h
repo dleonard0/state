@@ -7,11 +7,11 @@
 /**
  * A graph structure intended for use as an NFA or DFA.
  * Each graph is a set of nodes (possible states) each with
- * a set of character class transitions to other nodes.
+ * a set of character class edges to other nodes.
  * DFAs are guaranteed to have the properties of:
- *   - no epsilon transitions (transition.cclass != NULL)
- *   - unique transitions for any character
- *     (the transition.cclass do not overlap).
+ *   - no epsilon edges (edge.cclass != NULL)
+ *   - unique edges for any character
+ *     (the edge.cclass do not overlap).
  *
  * A weaker guarantee is that the 'finals' set for a node
  * has at most one member. Or, at least, its first member
@@ -22,11 +22,11 @@ struct nfa {
 	struct node {
 		unsigned nfinals;
 		const void **finals;
-		unsigned ntrans;
-		struct transition {
+		unsigned nedges;
+		struct edge {
 			cclass *cclass;
 			unsigned dest;
-		} *trans;
+		} *edges;
 	} *nodes;
 };
 
@@ -60,22 +60,22 @@ unsigned	nfa_new_node(struct nfa *nfa);
 void		nfa_add_final(struct nfa *nfa, unsigned n, const void *final);
 
 /**
- * Adds an epsilon transition to the graph.
- * An epsilon transition in a NFA means that the machine may
- * take the transition at any time.
+ * Adds an epsilon edge to the graph.
+ * An epsilon edge in a NFA means that the machine may
+ * transit the edge at any time.
  * Normaly though, the caller can immediately convert the
- * transition into a non-epsilon by setting the #transition.cclass
+ * edge into a non-epsilon by setting the #edge.cclass
  * field to a non-null pointer.
  *
- * @param g    the graph into which to add the transition
- * @param from the node index to transition from
- * @param to   the node index to transition to
+ * @param g    the graph into which to add the edge
+ * @param from the node index the edge leaves from
+ * @param to   the node index the edge enters to
  *
- * @returns a temporary pointer to the transition
+ * @returns a temporary pointer to the edge
  * (It's only valid until the call to this function, because
  * realloc may adjust pointers.)
  */
-struct transition *nfa_new_trans(struct nfa *nfa, unsigned from, unsigned to);
+struct edge *nfa_new_edge(struct nfa *nfa, unsigned from, unsigned to);
 
 /**
  * Converts a non-deterministic graph into a deterministic one.

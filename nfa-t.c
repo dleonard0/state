@@ -46,7 +46,7 @@ parse_atom(struct nfa *nfa, const char **sp)
 	struct subnfa ret;
 	cclass *cc = NULL;
 	char ch;
-	struct transition *t;
+	struct edge *edge;
 
 	ch = *(*sp)++;
 	if (ch == '(') {
@@ -85,8 +85,8 @@ parse_atom(struct nfa *nfa, const char **sp)
 	}
 	ret.entry = nfa_new_node(nfa);
 	ret.exit = nfa_new_node(nfa);
-	t = nfa_new_trans(nfa, ret.entry, ret.exit);
-	t->cclass = cc;
+	edge = nfa_new_edge(nfa, ret.entry, ret.exit);
+	edge->cclass = cc;
 	return ret;
 }
 
@@ -101,11 +101,11 @@ parse_term(struct nfa *nfa, const char **sp)
 		struct subnfa sub = ret;
 		ret.entry = nfa_new_node(nfa);
 		ret.exit = nfa_new_node(nfa);
-		nfa_new_trans(nfa, ret.entry, sub.entry);
-		nfa_new_trans(nfa, sub.exit, ret.exit);
-		nfa_new_trans(nfa, sub.entry, sub.exit);
+		nfa_new_edge(nfa, ret.entry, sub.entry);
+		nfa_new_edge(nfa, sub.exit, ret.exit);
+		nfa_new_edge(nfa, sub.entry, sub.exit);
 		if (ch == '*')
-			nfa_new_trans(nfa, sub.exit, sub.entry);
+			nfa_new_edge(nfa, sub.exit, sub.entry);
 		++*sp;
 	}
 	return ret;
@@ -120,12 +120,12 @@ parse_sequence(struct nfa *nfa, const char **sp)
 
 	ret.entry = nfa_new_node(nfa);
 	mid = nfa_new_node(nfa);
-	nfa_new_trans(nfa, ret.entry, mid);
+	nfa_new_edge(nfa, ret.entry, mid);
 	while (**sp && **sp != '|' && **sp != ')') {
 		struct subnfa next = parse_term(nfa, sp);
-		nfa_new_trans(nfa, mid, next.entry);
+		nfa_new_edge(nfa, mid, next.entry);
 		mid = nfa_new_node(nfa);
-		nfa_new_trans(nfa, next.exit, mid);
+		nfa_new_edge(nfa, next.exit, mid);
 	}
 	ret.exit = mid;
 	return ret;
@@ -141,12 +141,12 @@ parse_factor(struct nfa *nfa, const char **sp)
 		struct subnfa alt = ret;
 		ret.entry = nfa_new_node(nfa);
 		ret.exit = nfa_new_node(nfa);
-		nfa_new_trans(nfa, ret.entry, alt.entry);
-		nfa_new_trans(nfa, alt.exit, ret.exit);
+		nfa_new_edge(nfa, ret.entry, alt.entry);
+		nfa_new_edge(nfa, alt.exit, ret.exit);
 		++*sp; /* '|' */
 		alt = parse_sequence(nfa, sp);
-		nfa_new_trans(nfa, ret.entry, alt.entry);
-		nfa_new_trans(nfa, alt.exit, ret.exit);
+		nfa_new_edge(nfa, ret.entry, alt.entry);
+		nfa_new_edge(nfa, alt.exit, ret.exit);
 	}
 	return ret;
 }
@@ -170,8 +170,8 @@ make_nfa(const char *s)
 	nfa_add_final(nfa, res.exit, s);
 
 	sub = parse_exp(nfa, &s);
-	nfa_new_trans(nfa, res.entry, sub.entry);
-	nfa_new_trans(nfa, sub.exit, res.exit);
+	nfa_new_edge(nfa, res.entry, sub.entry);
+	nfa_new_edge(nfa, sub.exit, res.exit);
 
 	return nfa;
 }
@@ -188,13 +188,13 @@ assert_deterministic(const struct nfa *dfa)
 		const struct node *n = &dfa->nodes[i];
 		unsigned j;
 		cclass *allcc = cclass_new();
-		for (j = 0; j < n->ntrans; ++j) {
-			const struct transition *t = &n->trans[j];
-			assert(t->cclass); /* no epsilons */
-			assert(t->dest < dfa->nnodes);
+		for (j = 0; j < n->nedges; ++j) {
+			const struct edge *edge = &n->edges[j];
+			assert(edge->cclass); /* no epsilons */
+			assert(edge->dest < dfa->nnodes);
 			/* determinism check: */
-			assert(!cclass_intersects(t->cclass, allcc));
-			cclass_addcc(allcc, t->cclass);
+			assert(!cclass_intersects(edge->cclass, allcc));
+			cclass_addcc(allcc, edge->cclass);
 		}
 		if (cclass_is_empty(allcc)) {
 			assert(n->nfinals); /* only finals can dead-end */
@@ -219,23 +219,23 @@ dfa_matches(const struct nfa *dfa, const char *str)
 	for (s = str; *s; ++s) {
 		char ch = *s;
 		const struct node *n = &dfa->nodes[state];
-		const struct transition *trans = 0;
+		const struct edge *edge = 0;
 		unsigned j;
 
 		dprintf(" %u '%c'", state, ch);
 
-		for (j = 0; j < n->ntrans; ++j) {
-			if (cclass_contains_ch(n->trans[j].cclass, ch)) {
-				trans = &n->trans[j];
+		for (j = 0; j < n->nedges; ++j) {
+			if (cclass_contains_ch(n->edges[j].cclass, ch)) {
+				edge = &n->edges[j];
 				break;
 			}
 		}
-		if (!trans) {
+		if (!edge) {
 			dprintf(" reject\n");
 			return 0;
 		}
 		dprintf(" ->");
-		state = trans->dest;
+		state = edge->dest;
 	}
 	if (!dfa->nodes[state].nfinals) {
 		dprintf(" %u reject (end of string)\n", state);

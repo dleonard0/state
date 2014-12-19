@@ -83,10 +83,10 @@ nfa_dump(FILE *file, const struct nfa *nfa, int current_state)
 		fprintf(file, "%c%4u: %c ",
 		    current_state >= 0 && current_state == i ? '*' : ' ',
 		    i, n->nfinals ? 'F' : ' ');
-		for (j = 0; j < n->ntrans; ++j) {
-			const struct transition *t = &n->trans[j];
-			cclass_dump(file, t->cclass);
-			fprintf(file, "->%u ", t->dest);
+		for (j = 0; j < n->nedges; ++j) {
+			const struct edge *e = &n->edges[j];
+			cclass_dump(file, e->cclass);
+			fprintf(file, "->%u ", e->dest);
 		}
 		if (n->nfinals) {
 			fprintf(file, "\t\tF={");

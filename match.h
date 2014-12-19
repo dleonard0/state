@@ -45,7 +45,7 @@
  *    [ h^ello.txt h^a.c ]
  *
  * The next step, roughly corresponding to the wildcard '*', only moves
- * the caret through '?' (any char) transitions.
+ * the caret through '?' (any char) edges.
  *        1          1
  *    [ he^llo.txt ha^.c ]
  *

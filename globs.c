@@ -17,10 +17,10 @@ struct globs {
  * construction method.
  *
  * Implementation note: never return a subnfa with a *backwards*
- * epislon transition from exit to entry.
- * Although, a forward epsilon transition from entry to exit is OK.
+ * epislon edge from exit to entry.
+ * Although, a forward epsilon edge from entry to exit is OK.
  * This means that any subnfa returned can safely have a forward-
- * or backwards epsilon transition placed on it
+ * or backwards epsilon edge placed on it
  */
 struct subnfa {
         unsigned entry, exit;
@@ -43,7 +43,7 @@ subnfa_error(const char *error)
 /*
  * Builds an empty subnfa frame, with
  * two newly allocated states, entry and exit
- * but no transitions.  It is  ready for
+ * but no edges.  It is  ready for
  * other functions to construct some
  * matching automaton within it.
  *
@@ -78,8 +78,8 @@ static struct subnfa
 subnfa_box(struct nfa *nfa, struct subnfa inner)
 {
 	struct subnfa box = subnfa_frame(nfa);
-	nfa_new_trans(nfa, box.entry, inner.entry);
-	nfa_new_trans(nfa, inner.exit, box.exit);
+	nfa_new_edge(nfa, box.entry, inner.entry);
+	nfa_new_edge(nfa, inner.exit, box.exit);
 	return box;
 }
 
@@ -130,30 +130,30 @@ parse_group(struct nfa *nfa, stri *i, unsigned kind)
 		if (IS_ERROR_SUBNFA(seq)) {
 			return seq;
 		}
-		nfa_new_trans(nfa, alt.entry, seq.entry);
-		nfa_new_trans(nfa, seq.exit, alt.exit);
+		nfa_new_edge(nfa, alt.entry, seq.entry);
+		nfa_new_edge(nfa, seq.exit, alt.exit);
 	}
 	if (!stri_more(*i)) {
 		return subnfa_error("unclosed (");
 	}
 	stri_inc(*i); /* ')' */
 
-	if (nfa->nodes[alt.entry].ntrans == 0) {
+	if (nfa->nodes[alt.entry].nedges == 0) {
 		/* empty alt, () */
-		nfa_new_trans(nfa, alt.entry, alt.exit);
+		nfa_new_edge(nfa, alt.entry, alt.exit);
 	}
 
 	struct subnfa ret = subnfa_box(nfa, alt);
 	switch (kind) {
 	case '?':
-		nfa_new_trans(nfa, ret.entry, ret.exit);
+		nfa_new_edge(nfa, ret.entry, ret.exit);
 		break;
 	case '*':
-		nfa_new_trans(nfa, ret.entry, ret.exit);
-		nfa_new_trans(nfa, alt.exit, alt.entry);
+		nfa_new_edge(nfa, ret.entry, ret.exit);
+		nfa_new_edge(nfa, alt.exit, alt.entry);
 		break;
 	case '+':
-		nfa_new_trans(nfa, alt.exit, alt.entry);
+		nfa_new_edge(nfa, alt.exit, alt.entry);
 		break;
 	case '@':
 		break;
@@ -168,9 +168,9 @@ parse_cclass(struct nfa *nfa, stri *i)
 	struct subnfa sub = subnfa_frame(nfa);
 	cclass *cc = cclass_new();
 	int invert = 0;
-	struct transition *trans;
-	trans = nfa_new_trans(nfa, sub.entry, sub.exit);
-	trans->cclass = cc;
+	struct edge *edge;
+	edge = nfa_new_edge(nfa, sub.entry, sub.exit);
+	edge->cclass = cc;
 
 	if (stri_more(*i) &&
 	    (stri_at(*i) == '!' || stri_at(*i) == '^'))
@@ -221,9 +221,9 @@ parse_cclass(struct nfa *nfa, stri *i)
 	if (invert) {
 		/* add / now so that it is removed during inversion */
 		cclass_add(cc, '/', '/' + 1);
-		trans->cclass = cclass_invert(cc);
+		edge->cclass = cclass_invert(cc);
 		cclass_free(cc);
-		cc = trans->cclass;
+		cc = edge->cclass;
 	}
 	return sub;
 }
@@ -262,11 +262,11 @@ parse_atom(struct nfa *nfa, stri *i)
 		sub = subnfa_frame(nfa);
 		struct subnfa q = subnfa_frame(nfa); /* The "?" subnfa */
 		cc = question_cclass();
-		nfa_new_trans(nfa, sub.entry, q.entry);
-		nfa_new_trans(nfa, q.entry, q.exit)->cclass = cc;
-		nfa_new_trans(nfa, q.exit, sub.exit);
-		nfa_new_trans(nfa, q.entry, q.exit);
-		nfa_new_trans(nfa, q.exit, q.entry);
+		nfa_new_edge(nfa, sub.entry, q.entry);
+		nfa_new_edge(nfa, q.entry, q.exit)->cclass = cc;
+		nfa_new_edge(nfa, q.exit, sub.exit);
+		nfa_new_edge(nfa, q.entry, q.exit);
+		nfa_new_edge(nfa, q.exit, q.entry);
 		return sub;
 	}
 
@@ -280,7 +280,7 @@ parse_atom(struct nfa *nfa, stri *i)
 		cclass_add(cc, ch, ch + 1);
 	}
 	sub = subnfa_frame(nfa);
-	nfa_new_trans(nfa, sub.entry, sub.exit)->cclass = cc;
+	nfa_new_edge(nfa, sub.entry, sub.exit)->cclass = cc;
 	return sub;
 }
 
@@ -310,10 +310,10 @@ parse_sequence(struct nfa *nfa, stri *i)
 		if (IS_ERROR_SUBNFA(atom)) {
 			return atom;
 		}
-		nfa_new_trans(nfa, last, atom.entry);
+		nfa_new_edge(nfa, last, atom.entry);
 		last = atom.exit;
 	}
-	nfa_new_trans(nfa, last, seq.exit);
+	nfa_new_edge(nfa, last, seq.exit);
 	return seq;
 }
 
@@ -343,8 +343,8 @@ globs_add(struct globs *globs, const str *globstr, const void *ref)
 	if (IS_ERROR_SUBNFA(seq)) {
 		return seq.error;
 	}
-	nfa_new_trans(nfa, outer.entry, seq.entry);
-	nfa_new_trans(nfa, seq.exit, outer.exit);
+	nfa_new_edge(nfa, outer.entry, seq.entry);
+	nfa_new_edge(nfa, seq.exit, outer.exit);
 	nfa_add_final(nfa, outer.exit, ref);
 	return NULL;
 }
@@ -362,12 +362,12 @@ globs_step(const struct globs *globs, unsigned ch, unsigned *statep)
         unsigned j;
 
         /* TODO replace this with a binary search, because the
-         * transition array of a dfa node will be ordered by
+         * edge array of a dfa node will be ordered by
          * their (non-overlapping) cclass fields */
-        for (j = 0; j < node->ntrans; ++j) {
-                const struct transition *trans = &node->trans[j];
-                if (cclass_contains_ch(trans->cclass, ch)) {
-                        *statep = trans->dest;
+        for (j = 0; j < node->nedges; ++j) {
+                const struct edge *edge = &node->edges[j];
+                if (cclass_contains_ch(edge->cclass, ch)) {
+                        *statep = edge->dest;
                         return 1;
                 }
         }
