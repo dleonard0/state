@@ -4,6 +4,8 @@
 #include "read.h"
 #include "str.h"
 
+/* A reader interface for stdio */
+
 static void *
 stdio_open(void *fctxt, const struct str *path_str)
 {

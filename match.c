@@ -55,6 +55,10 @@ matcher_new(const struct globs *globs,
 	return matcher;
 }
 
+/**
+ * Replace an exhausted 'deferred' match with a new list of matches
+ * by asking the callback to generate some more.
+ */
 static struct match **
 matcher_generate(struct matcher *matcher, struct match **mp, struct match *dm)
 {

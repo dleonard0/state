@@ -5,6 +5,8 @@
 #include "macro.h"
 #include "expand.h"
 
+/* Macro variables */
+
 struct var *
 var_new(enum var_type type)
 {

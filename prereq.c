@@ -4,14 +4,20 @@
 #include "atom.h"
 #include "prereq.h"
 
+/* Preqreuisite expression trees */
+
+/** Prereq parser context */
 struct context {
-	stri i;
-	const char *error;
+	stri i;			/**< position in the parse input */
+	const char *error;	/**< error output to caller */
 };
 
 static struct prereq * parse_all_list(struct context *ctxt);
 static struct prereq * parse_any_list(struct context *ctxt);
 
+/**
+ * Creates a new, half-initialized prereq node in the expr tree.
+ */
 static struct prereq *
 prereq_new(enum prereq_type type)
 {
@@ -20,6 +26,14 @@ prereq_new(enum prereq_type type)
 	return p;
 }
 
+/**
+ * Tests if the parser could consume one of the given characters.
+ *
+ * @param ctxt  the parse context, with the input stream to check
+ * @param chs   a string of ASCII characters to check for
+ *
+ * @returns true if one of the characters in @a chs can be read next.
+ */
 static unsigned
 couldconsume(struct context *ctxt, const char *chs)
 {
@@ -34,6 +48,17 @@ couldconsume(struct context *ctxt, const char *chs)
 	return 0;
 }
 
+/**
+ * Attempts to consume any one of the characters from the
+ * input stream.
+ *
+ * @param ctxt  the parse context with the input stream
+ * @param chs   a string of ASCII characters, of which any one
+ *		is to be consumed
+ *
+ * @returns  0 if no char in @a chs could be consumed, otherwise
+ *           the ASCII value of the character consumed.
+ */
 static unsigned
 canconsume(struct context *ctxt, const char *chs)
 {
@@ -44,6 +69,15 @@ canconsume(struct context *ctxt, const char *chs)
 	return ch;
 }
 
+/**
+ * Search ahead for the closest character from a set of chars.
+ *
+ * @param ctxt the context to search
+ * @param chs  the string of ASCII characters, any one to search for
+ *
+ * @return a stri that points to either the found character, or
+ *         points to 'nothing' (ie stri_more() will fail on it)
+ */
 static stri
 find(struct context *ctxt, const char *chs)
 {
@@ -62,11 +96,22 @@ find(struct context *ctxt, const char *chs)
 	return i;
 }
 
+/**
+ * Skips upcoming spaces and tabs in the input stream.
+ */
 static void skipwhite(struct context *ctxt) {
 	while (canconsume(ctxt, " \t"))
 		;
 }
 
+/**
+ * Parses just one of the following prereq expressions
+ * from the input stream:
+ *	!P
+ *	(...)
+ *	{...}
+ *	s
+ */
 static struct prereq *
 parse_term(struct context *ctxt)
 {
@@ -116,6 +161,10 @@ parse_term(struct context *ctxt)
 	return p;
 }
 
+/**
+ * Parses the sequence of expressions within (...).
+ * The resulting expression tree looks like: (a (b (c ())))
+ */
 static struct prereq *
 parse_all_list(struct context *ctxt)
 {
@@ -134,6 +183,10 @@ parse_all_list(struct context *ctxt)
 	return ret;
 }
 
+/**
+ * Parses the sequence of expressions within {...}.
+ * The resulting expression tree looks like: {{{{} a} b} c}
+ */
 static struct prereq *
 parse_any_list(struct context *ctxt)
 {

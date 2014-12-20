@@ -56,7 +56,7 @@ cclass_is_empty(const cclass *cc)
 	return cc->nintervals == 0;
 }
 
-/* Inserts interval [lo,hi) into the cclass at position i, unchecked. */
+/** Inserts interval [lo,hi) into the cclass at position i, unchecked. */
 static void
 cclass_insert_before(cclass *cc, unsigned i, unsigned lo, unsigned hi)
 {
@@ -72,7 +72,7 @@ cclass_insert_before(cclass *cc, unsigned i, unsigned lo, unsigned hi)
 	cc->nintervals++;
 }
 
-/* Removes the ith interval from cclass, unchecked */
+/** Removes the ith interval from cclass, unchecked */
 static void
 cclass_remove(cclass *cc, unsigned i)
 {

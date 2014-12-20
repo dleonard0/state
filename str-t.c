@@ -3,6 +3,8 @@
 
 #include "str.h"
 
+/* String unit tests */
+
 extern int str_count;
 
 int

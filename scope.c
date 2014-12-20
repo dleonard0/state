@@ -3,6 +3,8 @@
 #include "dict.h"
 #include "scope.h"
 
+/* Nested scopes */
+
 struct scope *
 scope_new(struct scope *outer, void (*freefn)(void *))
 {

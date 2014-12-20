@@ -9,39 +9,43 @@ asm(".pushsection \".debug_gdb_scripts\", \"MS\",@progbits,1\n"
     ".asciz \"macro-gdb.py\"\n"
     ".popsection\n");
 
-int macro_count;
-int macro_list_count;
+/*------------------------------------------------------------
+ * storage allocators
+ */
 
+/** Allocates an uninitialized macro structure */
 static struct macro *
 macro_alloc()
 {
-	macro_count++;
 	return malloc(sizeof (struct macro));
 }
 
+/** Deallocates a finalized a macro structure */
 static void
 macro_dealloc(struct macro *m)
 {
 	free(m);
-	macro_count--;
 }
 
 
+/** Allocates an uninitialized macro list structure */
 static struct macro_list *
 macro_list_alloc()
 {
-	macro_list_count++;
 	return malloc(sizeof (struct macro_list));
 }
 
+/** Deallocates a finalized macro list structure */
 static void
 macro_list_dealloc(struct macro_list *ml)
 {
 	free(ml);
-	macro_list_count--;
 }
 
 
+/*------------------------------------------------------------
+ * constructors, destructors 
+ */
 
 struct macro *
 macro_new_atom(const char *atom)
@@ -160,9 +164,15 @@ macro_rtrim(macro **mp)
         *mp = 0;
 }
 
-/*
- * roughly splits a macro at the first non-atomic whitespace;
- * returns the right side, which will start with the found whitespace
+/**
+ * Roughly splits a macro in-place at the first non-atomic whitespace.
+ * Only "toplevel" whitespace is found (i.e. doesn't search 
+ * inside $(...) refs).
+ *
+ * @param   mp  the macro to truncate at the first non-atomic whitespace
+ *
+ * @returns the removed 'right side', which will start with the
+ *          found whitespace; or @c NULL if nothing found.
  */
 static macro *
 macro_rough_split(macro **mp)

@@ -8,10 +8,27 @@
 #include "dict.h"
 #include "expand.h"
 
-/*
- * $(subst FROM,TO,TEXT)
+/**
+ * A function type for all the "$(func ...)" implementations.
+ *
+ * @param x      address where to store the start of a generated string
+ * @param argc   length of the args[] array
+ * @param args   argument strings, "$(func args[0],args[1],...)"
+ * @param scope  the current variable scope
+ *
+ * @return the address for the caller to append further strings,
+ *         or for the caaller to store a @c NULL pointer there to
+ *         terminate the string.
+ */
+typedef str **(*func_t)(str **x, unsigned argc, const str **args,
+			const struct varscope *scope);
+
+/**
+ * Implents the "$(subst FROM,TO,TEXT)" macro expansion.
  * Replace all occurrences of FROM in TEXT, with TO.
  * If FROM is empty string, then simply append TO to the end of TEXT
+ *
+ * @see #func_t
  */
 static str **
 func_subst(str **x, unsigned argc, const str **args, 
@@ -26,28 +43,32 @@ func_subst(str **x, unsigned argc, const str **args,
 	}
 
 	/*
-	 * maintain a 'hold' range which is the range of
-	 * text that we have tentatively matched against the
-	 * FROM text.
+	 * This loop maintains a 'hold' range which is the range of
+	 * text that we have tentatively already matched against the
+	 * FROM text, but that we anticipate 'emitting' should the tentative
+	 * match fail at an unwanted character..
 	 * Because we don't want to return single-character
-	 * strings at a time, we also maintain an 'out' range;
+	 * strings at a time, we also maintain an 'out' range, so
+	 * that a compact string is constructed.
 	 */
-	stri text = stri_str(TEXT);
-	stri out_start, out_end;
-	out_start = out_end = text;
+	stri text;	/* current match point of loop */
+	stri out_start;	/* start of the hold range */
+	stri out_end;	/* end of the hold range */
+
+	out_start = out_end = text = stri_str(TEXT);
 	while (stri_more(text)) {
 		stri f = stri_str(FROM);
 		stri t = text;
-		/* Try to match from at position t */
+		/* Try to match FROM at position t */
 	        while (stri_more(t) && stri_at(t) == stri_at(f)) {
 			stri_inc(t);
 			stri_inc(f);
 			if (!stri_more(f)) {
-				/* full match! */
+				/* got a full match of FROM in TEXT! */
 				x = str_xcatr(x, out_start, out_end);
 				x = str_xcat(x, TO);
-				text = f;	/* skip text up */
-				out_start = out_end = text;
+				text = f;	/* skip ahead in TEXT */
+				out_start = out_end = text; /* restart */
 				break;
 			}
 		}
@@ -56,20 +77,29 @@ func_subst(str **x, unsigned argc, const str **args,
 			out_end = text;
 		}
 	}
+	/* Copy out the straggler hold range */
 	return str_xcatr(x, out_start, out_end);
 }
 
-/* A type for all the $(func ...) function implementations */
-typedef str **(*func_t)(str **x, unsigned argc, const str **args,
-			const struct varscope *scope);
-
+/** A $(func) dictionary mapping "func" atoms to #func_t pointers,
+ *  used to speed up subsequent lookups. */
 static struct dict *Func_dict;
+
+/** Cleans up #Func_dict */
 static void
 find_func_atexit()
 {
 	dict_free(Func_dict);
 }
 
+/**
+ * Find the function implementation pointer for the named function.
+ *
+ * @param  name  the function's name
+ *
+ * @return a pointer to the function, or
+ *         @c NULL if the function is unknown
+ */
 static func_t
 find_func(atom name)
 {
@@ -81,6 +111,8 @@ find_func(atom name)
 		} while (0)
 
 		add_func("subst", func_subst);
+		/* TODO: add more functions here */
+
 		Func_dict = dict;
 		atexit(find_func_atexit);
 	}
@@ -89,8 +121,16 @@ find_func(atom name)
 
 
 /**
- * @param argc number of arguments
- * @param args all arguments (including a string copy of arg0)
+ * Expands a destructured variable/function "$(arg0 arg1,arg2,...)"
+ * attaching the resulting text to the given attachment point.
+ *
+ * @param x     attachment point for generated strings
+ * @param arg0  name of the variable or function to expand
+ * @param argc  number of arguments
+ * @param args  all arguments (including a string copy of arg0)
+ * @param scope the current variable scope
+ *
+ * @return next string attachment point
  */
 static str **
 expand_apply(str **x, atom arg0, unsigned argc, const str **args,

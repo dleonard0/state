@@ -3,6 +3,8 @@
 #include "str.h"
 #include "atom.h"
 
+/* Unit tests for atoms */
+
 int
 main(void)
 {

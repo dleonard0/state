@@ -1,4 +1,3 @@
-
 #include <ctype.h>
 #include <string.h>
 
@@ -6,24 +5,31 @@
 
 #define EOF (-1)
 
-#define CONDKIND_NEGATE 0x80
-#define MAX_LOOKAHEAD 1024
+#define CONDKIND_NEGATE 0x80		/* or'd with other CONDKIND_* flags */
+#define MAX_LOOKAHEAD 1024		/* probably overkill */
 
 struct parser {
-	const struct parser_cb *cb;
-	void *context;
-	unsigned lineno;
-	unsigned utf8col;
+	const struct parser_cb *cb;	/**< caller's callback */
+	void *context;			/**< caller's callback context */
+	unsigned lineno;		/**< line number of #next() char */
+	unsigned utf8col;		/**< column number of #next() char */
 	char lookahead_buf[MAX_LOOKAHEAD];
-	char *lookahead;
-	char *lookahead_end;
-	int last_read;
-	unsigned in_rule;
-	unsigned if_endepth;    /* depth of ifs */
-	unsigned if_disabled;   /* depth of ifs inside endepth */
+	char *lookahead;		/**< next pointer into lookahead */
+	char *lookahead_end;		/**< end of valid in lookahead_buf[] */
+	int last_read;			/**< return value from last cb.read */
+	unsigned in_rule;		/**< true if in a rule block */
+	unsigned if_endepth;		/**< depth of true ifs */
+	unsigned if_disabled;		/**< depth of false ifs within trues */
 };
 
 
+/**
+ * Initializes a parser structure for a new file.
+ *
+ * @param p        the parser structure to initialize
+ * @param cb       the callback structure
+ * @param context  the callback's context pointer
+ */
 static void
 parser_init(struct parser *p, const struct parser_cb *cb, void *context)
 {
@@ -49,7 +55,15 @@ parser_get_context(const struct parser *p)
  * lookahead logic
  */
 
-/* Fill lookahead[0..n-1], returning 0 if it couldn't be done. */
+/**
+ * Attempts to ensure there are n bytes of data in the lookahead buffer.
+ * Reads bytes from the cb iterface if there is insufficient data.
+ *
+ * @param p   the parser context holding the la buffer and cb pointer
+ * @param n   the number of bytes desired to be valid at p->lookahead
+ *
+ * @returns 0 on failure.
+ */
 static int
 lookahead(struct parser *p, unsigned n)
 {
@@ -60,11 +74,13 @@ lookahead(struct parser *p, unsigned n)
 		if (n <= avail)
 			return 1;
 		if (p->lookahead > p->lookahead_buf) {
+			/* Pack the buffer down */
 			memmove(p->lookahead_buf, p->lookahead, avail);
 			p->lookahead = p->lookahead_buf;
 			p->lookahead_end = p->lookahead_buf + avail;
 		}
 		if (p->last_read > 0) {
+			/* Try to read as much as possible each time */
 			p->last_read = p->cb->read(p, p->lookahead_end,
 						   MAX_LOOKAHEAD - avail);
 		}
@@ -75,7 +91,10 @@ lookahead(struct parser *p, unsigned n)
 	}
 }
 
-/* Peeks at the next character in lookahead, or returns EOF */
+/**
+ * Peeks at what the next character would be without altering state.
+ * @returns what #next() would return.
+ */
 static int
 peek(struct parser *p)
 {
@@ -89,7 +108,10 @@ peek(struct parser *p)
 	return ret;
 }
 
-/* Consumes and returns the next character from the input */
+/**
+ * Consumes and returns the next character from the input stream.
+ * @return EOF if there is no more data.
+ */
 static int
 next(struct parser *p)
 {
@@ -110,7 +132,10 @@ next(struct parser *p)
 	return ret;
 }
 
-/* Skips over n characters from input */
+/**
+ * Skips over n characters from input.
+ * This is like calling #next() @a n times.
+ */
 static void
 skip(struct parser *p, unsigned n)
 {
@@ -120,15 +145,34 @@ skip(struct parser *p, unsigned n)
 }
 
 
-/* Returns true if the given string could be consumed */
+/**
+ * Tests if a string _could_ be consumed from input next.
+ * This function has no effect on the input pointer.
+ *
+ * @param p  the parser
+ * @param s  the C string to consider
+ *
+ * @returns true if the string @a s appears to be next on the input.
+ */
+#define could_read(p, s) could_read_(p, s, sizeof s - 1)
 static int
 could_read_(struct parser *p, const char *s, int len)
 {
 	return lookahead(p, len) && memcmp(p->lookahead, s, len) == 0;
 }
-#define could_read(p, s) could_read_(p, s, sizeof s - 1)
 
-/* Returns true if the given string was able to be consumed */
+/**
+ * Tries to consume the given string from the input.
+ * If @a s is not immediately next on the input, this function
+ * has no effect. Otherwise, the string is conumed and the
+ * input pointer is advanced past it.
+ * 
+ * @param p  the parser
+ * @param s  the C string to be consumed
+ *
+ * @return true iff @a s could be consumed from the input.
+ */
+#define can_read(p, s) can_read_(p, s, sizeof s - 1)
 static int
 can_read_(struct parser *p, const char *s, int len)
 {
@@ -139,12 +183,21 @@ can_read_(struct parser *p, const char *s, int len)
 		return 0;
 	}
 }
-#define can_read(p, s) can_read_(p, s, sizeof s - 1)
 
-/*
- * Returns true if the given string could be consumed,
- * AND it would be followed by a non-letter/digit/EOF
+/**
+ * Test if the given string could be consumed as the next "word".
+ * That is, test if the string is present AND it 
+ * would be followed immediately by a non-alnum or EOF.
+ * This allows us to check for identifiers that are not part of
+ * a longer identifier.
+ *
+ * @param p  the parser context
+ * @param s  the word you're looking for (a literal constant)
+ *
+ * @return true iff the string could be consumed and it would 
+ *              be followed by a non-alnum character, or EOF
  */
+#define could_read_w(p, s) could_read_w_(p, s, sizeof s - 1)
 static int
 could_read_w_(struct parser *p, const char *s, int len)
 {
@@ -152,12 +205,18 @@ could_read_w_(struct parser *p, const char *s, int len)
 	       memcmp(p->lookahead, s, len) == 0 &&
 	       !isalnum(p->lookahead[len]);
 }
-#define could_read_w(p, s) could_read_w_(p, s, sizeof s - 1)
 
-/*
- * Returns true if the given string was able to be consumed,
- * AND the next (unconsumed) character is not a non-letter/digit
+/**
+ * Returns true if the given string was able to be consumed as
+ * the next "word" on the input, leaving a non-alphanumeric
+ * character or EOF as the first next input character.
+ *
+ * @param p  the parser context
+ * @param s  the word to consume (a literal constant)
+ *
+ * @return true iff the word was found and consumed
  */
+#define can_read_w(p, s) can_read_w_(p, s, sizeof s - 1)
 static int
 can_read_w_(struct parser *p, const char *s, int len)
 {
@@ -168,9 +227,13 @@ can_read_w_(struct parser *p, const char *s, int len)
 		return 0;
 	}
 }
-#define can_read_w(p, s) can_read_w_(p, s, sizeof s - 1)
 
-/* skip space and tab */
+/** 
+ * Skips over any whitespace (but not newline) characters on input.
+ *
+ * @param p the parser
+ * @returns a peek at the next character, @see #peek()
+ */
 static int
 skip_sp(struct parser *p)
 {
@@ -180,7 +243,12 @@ skip_sp(struct parser *p)
 	return ch;
 }
 
-/* skip space and tab and newline */
+/** 
+ * Skips over any whitespace (newline included) on input.
+ *
+ * @param p the parser
+ * @returns a peek at the next character, @see #peek()
+ */
 static int
 skip_wsp(struct parser *p)
 {
@@ -190,7 +258,12 @@ skip_wsp(struct parser *p)
 	return ch;
 }
 
-/* skip to end of line character, but do not consume the \n */
+/**
+ * Skips to the end of the current line, but does not consume the \n.
+ *
+ * @param p the parser
+ * @returns a peek at the next character, @see #peek()
+ */
 static int
 skip_to_eol(struct parser *p)
 {
@@ -200,25 +273,14 @@ skip_to_eol(struct parser *p)
 	return ch;
 }
 
-/* Skip ch iff it is there */
-static void
-skip_ch(struct parser *p, int ch)
-{
-	if (peek(p) == ch)
-		next(p);
-}
-
-/* report an error to the callback */
-static int
-error(struct parser *p, const char *msg)
-{
-	if (p->cb->error) {
-		p->cb->error(p, p->lineno, p->utf8col, msg);
-	}
-	return 0;
-}
-
-/* return true if we could read ch */
+/**
+ * Consumes a character iff it is next on the input.
+ * If the next character is different, this function has no effect.
+ *
+ * @param p  the parser
+ * @param ch the character to consume
+ * @returns 1 iff @a ch was consumed
+ */
 static int
 can_readch(struct parser *p, int ch)
 {
@@ -228,7 +290,30 @@ can_readch(struct parser *p, int ch)
 	return 1;
 }
 
-/* consume up to eol, and return true if it was all blank or comments */
+/**
+ * Reports an error to the caller via the callback's optional
+ * error handler.
+ *
+ * @param p   the parser
+ * @param msg the message to report
+ * @returns 0
+ */
+static int
+error(struct parser *p, const char *msg)
+{
+	if (p->cb->error) {
+		p->cb->error(p, p->lineno, p->utf8col, msg);
+	}
+	return 0;
+}
+
+/**
+ * Consumes up to the next end-of-line, excluding the \n.
+ *
+ * @param p  the parser context
+ *
+ * @returns 1 iff what was consumed was all comments or whitespace.
+ */
 static int
 expect_eol(struct parser *p)
 {
@@ -249,14 +334,16 @@ expect_eol(struct parser *p)
  * Parsing Staterules
  */
 
-/*
- * Try to convert the first macro in a macro_list into an atom.
- * This is for when $(FOO BAR) is parsed, and the FOO atom
- * can be resolved early once.
- * It doesn't work for (the outermost form of) $($(VAR)), though
- * so that case is left alone.
+/**
+ * Tries to convert the first macro of a macro_list into an atom.
+ * This is used when $(FOO BAR) is parsed, and the FOO atom
+ * is being resolved as an atom early.
+ * It doesn't work for forms like $($(VAR)).
+ *
+ * @param ref  the string macro to convert into an atom. The macro is
+ *             converted in-place, if at all.
  */
-void
+static void
 maybe_make_reference_atom(macro *ref)
 {
 	if (ref->type == MACRO_REFERENCE &&
@@ -273,10 +360,15 @@ maybe_make_reference_atom(macro *ref)
 	}
 }
 
-/*
- * Remove the trailing '?' or '+' character from a macro
+/**
+ * Removes the trailing '?' or '+' character from a macro
  * and return the character removed (or '\0').
  * This is used for handling ?= and += definitions.
+ *
+ * @param m the macro to trim off the last character
+ *
+ * @returns the last '?' or '+' character removed from @a m, or
+ *          '\0' if no character was erased.
  */
 static int
 macro_erase_last_assign_prefix(macro *m)
@@ -310,12 +402,17 @@ macro_erase_last_assign_prefix(macro *m)
 	return ch;
 }
 
+/** Maximum number of bytes supported in a UTF-8 encoding
+ *  of a single unicode code point. */
 #define MAX_UTF8  8
 
 /**
- * Attempt to read a UTF-8 encoded codepoint from the
- * input stream. The codepoint is not decoded; just stored.
- * @param utf8 return storage. It will be NUL terminated.
+ * Attempts to read a UTF-8 encoded codepoint from the
+ * input stream. The UTF-8 bytes are not actually decoded;
+ * just stored in the utf8[] buffer.
+ *
+ * @param utf8 return storage. It will be NUL-terminated on success.
+ *
  * @return 1 on success, 0 if bad UTF-8.
  */
 static int
@@ -342,8 +439,11 @@ parse_utf8(struct parser *p, char utf8[static MAX_UTF8])
 }
 
 /**
- * Parse a simple C-like identifier.
+ * Parse a simple C-like identifier from the input stream.
+ * The identifier should match [a-zA-Z][a-zA-Z0-9_$]*
+ *
  * @param ident_return where to store the identifier
+ *
  * @return 1 on success
  */
 static int
@@ -389,17 +489,18 @@ parse_ident(struct parser *p, atom *ident_return)
  *                 ;
  */
 
-#define CLOSE_RPAREN	(1 <<  0)
-#define CLOSE_RBRACE	(1 <<  1)
-#define CLOSE_SPACE	(1 <<  2)
-#define CLOSE_COMMA	(1 <<  3)
-#define CLOSE_LF	(1 <<  4)
-#define CLOSE_HASH	(1 <<  5)
-#define CLOSE_COLON	(1 <<  6)
-#define CLOSE_EQUALS	(1 <<  7)
-#define CLOSE_SEMICOLON	(1 <<  8)
+/* Close flag bits that inform #parse_macro when it should stop parsing */
+#define CLOSE_RPAREN	(1 <<  0)	/**< stop on ')' */
+#define CLOSE_RBRACE	(1 <<  1)	/**< stop on '}' */
+#define CLOSE_SPACE	(1 <<  2)	/**< stop on ' ' or '\t' */
+#define CLOSE_COMMA	(1 <<  3)	/**< stop on ',' */
+#define CLOSE_LF	(1 <<  4)	/**< stop on '\n' */
+#define CLOSE_HASH	(1 <<  5)	/**< stop on '#' */
+#define CLOSE_COLON	(1 <<  6)	/**< stop on ':' */
+#define CLOSE_EQUALS	(1 <<  7)	/**< stop on '=' */
+#define CLOSE_SEMICOLON	(1 <<  8)	/**< stop on ';' */
 
-int
+static int
 is_close(int ch, unsigned close)
 {
 	if ((close & CLOSE_RPAREN) && ch == ')')
@@ -424,16 +525,21 @@ is_close(int ch, unsigned close)
 }
 
 /**
- * The macro parse workhorse. Scans text to build up
- * a macro structure.
+ * Parses a macro from the input.
+ * This is the workhorse function of the parser. It scans text to build up
+ * a macro list, stopping when it encounters a "close" character.
+ * On failure, the error field of the parser @a p is filled in (but a
+ * macro is still returned).
  *
- * @param close bit flags indicating what characters to stop on.
- * @param mp    pointer to the macro to return the result at.
- *              caller should deallocate this regardless of the
+ * @param p	the parser context
+ * @param close flag bits indicating what characters to stop on.
+ * @param mp    pointer to where to store the resulting terminated macro.
+ *              The caller should initialize this to @c NULL then 
+ *		deallocate/take the pointer on return, regardless of the
  *              return code.
  * @returns 1 on success, 0 on failure
  */
-int
+static int
 parse_macro(struct parser *p, unsigned close, macro **mp)
 {
 	char buf[2048];
@@ -541,8 +647,15 @@ again:
 	return 1;
 }
 
-/* read ( \t\n)* into the macro */
-void
+/**
+ * Reads [ \t\n]* and appends it to the macro.
+ * This is used by the 'define'/'endef' logic.
+ *
+ * @param p  parser context
+ * @param mp an initialized pointer that will be updated
+ *           with a macro containing whitespace.
+ */
+static void
 parse_macro_nlsp(struct parser *p, macro **mp)
 {
 	char buf[2048];
@@ -554,7 +667,7 @@ again:
 	while (b < buf + sizeof buf - 2) {
 	    ch = peek(p);
 	    if (!(ch == ' ' || ch == '\t' || ch == '\n'))
-	    	break;
+		break;
 	    *b++ = next(p);
 	}
 	if (b != buf) {
@@ -563,7 +676,13 @@ again:
 	}
 }
 
-/* End any open rule state; and inform the callback if necessary */
+/**
+ * Ends any open rule state in the parser context, notifying
+ * the callback if it can. This can be called harmlessly
+ * just before a non-rule parse event is likely.
+ *
+ * @param p parser state.
+ */
 static void
 maybe_end_rule(struct parser *p)
 {
@@ -575,10 +694,13 @@ maybe_end_rule(struct parser *p)
 }
 
 /**
- * Parses a single line.
- * If there's a problem, it returns 0 and expects the
- * caller to ditch the rest of the line.
- * @returns 1 if a line was parsed OK.
+ * Parses a single line from the input.
+ * May call the callback functions to inform it of what was parsed.
+ *
+ * @param p the parser context
+ *
+ * @returns 1 if a line was parsed OK, or
+ *          0 if there was a problem: the caller should discard til '\n'.
  */
 static int
 parse_one(struct parser *p)
@@ -903,7 +1025,7 @@ parse(const struct parser_cb *cb, void *context)
 	    if (!parse_one(&p)) {
 		skip_to_eol(&p);
 	    }
-	    skip_ch(&p, '\n');
+	    can_readch(&p, '\n');	/* skips \n if it is there */
 	}
 	maybe_end_rule(&p);
 

@@ -5,11 +5,12 @@
 
 #include "parser.h"
 
-/*
- * This is a capturing context. The plan is to run the
- * parser, and to save its callbacks as text into the result[] array.
- * Then, we compare an expected string against the output result[].
- * What follows are callback functions that append to the result[] array.
+/* Unit tests for the parser */
+
+/**
+ * A capturing context for tests. The plan is to run the
+ * parser, and save its callbacks as text appended to the result[] array.
+ * Then, we compare an expected string against the actual result[].
  */
 struct cb_context {
 	const char *input;
@@ -17,7 +18,11 @@ struct cb_context {
 	char *resultp;
 };
 
-/* appends a char to the result[] array */
+/*------------------------------------------------------------
+ * cb_context.result[] appending
+ */
+
+/** Appends a single char to the context's result[] array */
 static void
 cb_putc(struct cb_context *context, char c)
 {
@@ -26,7 +31,7 @@ cb_putc(struct cb_context *context, char c)
 	*context->resultp = '\0';
 }
 
-/* appends a string to the result[] array */
+/** Appends a string to the context's result[] array */
 static void
 cb_puts(struct cb_context *context, const char *text)
 {
@@ -34,7 +39,7 @@ cb_puts(struct cb_context *context, const char *text)
 		cb_putc(context, *text++);
 }
 
-/* appends a str to the result[] array */
+/** Appends a str to the context's result[] array */
 static void
 cb_putstr(struct cb_context *context, const str *s)
 {
@@ -47,7 +52,7 @@ cb_putstr(struct cb_context *context, const str *s)
 	}
 }
 
-/* appends a macro to the result[] array */
+/** Appends a macro to the context's result[] array */
 static void
 cb_putm(struct cb_context *context, const macro *m)
 {
@@ -78,7 +83,7 @@ cb_putm(struct cb_context *context, const macro *m)
 	}
 }
 
-/* appends an integer to the result[] array */
+/** Appends an integer to the callback's result[] array */
 static void
 cb_puti(struct cb_context *context, unsigned i)
 {
@@ -94,6 +99,7 @@ cb_puti(struct cb_context *context, unsigned i)
  * callbacks
  */
 
+/** Reads data recorded inthe cb_context, for the parser */
 static int
 cb_read(struct parser *p, char *dst, unsigned len)
 {
@@ -111,7 +117,7 @@ cb_read(struct parser *p, char *dst, unsigned len)
 	return count;
 }
 
-
+/** Appends "DEFINE var macro\n" to the cb_context.result[]. */
 static void
 cb_define(struct parser *p, macro *lhs, int defkind, macro *text,
 	  unsigned lineno)
@@ -133,6 +139,7 @@ cb_define(struct parser *p, macro *lhs, int defkind, macro *text,
 	macro_free(text);
 }
 
+/** Appends ".ident macro\n" to the cb_context.result[]. */
 static void
 cb_directive(struct parser *p, atom ident, macro *text, unsigned lineno)
 {
@@ -148,6 +155,7 @@ cb_directive(struct parser *p, atom ident, macro *text, unsigned lineno)
 	macro_free(text);
 }
 
+/** Appends "IFDEF/IFEQ ...\n" to the cb_context.result[]. */
 static int
 cb_condition(struct parser *p, int condkind, macro *t1, macro *t2,
 	     unsigned lineno)
@@ -178,6 +186,7 @@ cb_condition(struct parser *p, int condkind, macro *t1, macro *t2,
 	return 0;
 }
 
+/** Appends "RULE goal : depends\n" to the cb_context.result[]. */
 static void
 cb_rule(struct parser *p, macro *goal, macro *depends, unsigned lineno)
 {
@@ -192,6 +201,7 @@ cb_rule(struct parser *p, macro *goal, macro *depends, unsigned lineno)
 	macro_free(depends);
 }
 
+/** Appends "\tCOMMAND-TEXT\n" to the cb_context.result[]. */
 static void
 cb_command(struct parser *p, macro *text, unsigned lineno)
 {
@@ -202,6 +212,7 @@ cb_command(struct parser *p, macro *text, unsigned lineno)
 	macro_free(text);
 }
 
+/** Appends "ERROR <line>:<col> MSG\n" to the cb_context.result[]. */
 static void
 cb_error(struct parser *p, unsigned lineno, unsigned u8col, const char *msg)
 {
@@ -215,6 +226,7 @@ cb_error(struct parser *p, unsigned lineno, unsigned u8col, const char *msg)
 	cb_putc(context, '\n');
 }
 
+/** Appends "\n" to the cb_context.result[]. */
 static void
 cb_end_rule(struct parser *p)
 {
@@ -237,9 +249,14 @@ static const struct parser_cb test_cb = {
  * comparison/debugging
  */
 
-/*
- * Prints the string using stdio, but uses ANSI colours to
- * make the string more understandable. just for debug
+/**
+ * Prints the str using stdio, but using ANSI colours to
+ * make the string more understandable.
+ * This is just to make debug easier.
+ *
+ *   dim fg  - line number
+ *   red bg  - hidden whitespace at end of line
+ *   green   - visible whitespace (eg, ␉)
  */
 static void
 fprint_str(FILE *f, const char *str)
@@ -266,7 +283,7 @@ fprint_str(FILE *f, const char *str)
 	    if (tsp) fputs("\033[41m", f);
 
 	    if (ch == '\t') {
-		fputs("\033[32m\u2409", f);
+		fputs("\033[32m\xe2\x90\x89", f);
 		if ((col & 7) != 7) putc('\t', f);
 	    } else {
 	        putc(ch, f);
@@ -286,7 +303,16 @@ fprint_str(FILE *f, const char *str)
 	    fputs("\033[31m(no newline at end)\033[m", stderr);
 }
 
-/* parse the input source and compare the result[] against the expect string */
+/**
+ * Parses the input source and compares the stringified result[]
+ * with the test case's expected string.
+ * On error, prints a detailed message.
+ *
+ * @param src    an input source string to parse
+ * @param expect the C string representing the stringified parse result
+ *
+ * @return 0 if the stringified parse result differs from expected.
+ */
 static int
 parses_to(const char *src, const char *expect)
 {

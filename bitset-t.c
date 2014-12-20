@@ -1,6 +1,8 @@
 #include <assert.h>
 #include "bitset.h"
 
+/* Unit tests for bitsets */
+
 int main()
 {
 	unsigned i;

@@ -6,10 +6,16 @@
 #include "str.h"
 #include "prereq.h"
 
-static void prereq_tostr_(const struct prereq *p, char **s);
+/* Unit tests for the prereq expression tree parser */
 
+static void prereq_tostr(const struct prereq *p, char **s);
+
+/**
+ * Stringifies an ANY or FALSE prereq into a string buffer.
+ * Does not emit the braces.
+ */
 static void
-prereq_any_tostr_(const struct prereq *p, char **s)
+any_tostr(const struct prereq *p, char **s)
 {
 	if (!p) {
 		*(*s)++ = '0';
@@ -19,20 +25,24 @@ prereq_any_tostr_(const struct prereq *p, char **s)
 		return;
 	if (p->type != PR_ANY) {
 		*(*s)++ = '?';
-		prereq_tostr_(p, s);
+		prereq_tostr(p, s);
 		return;
 	}
-	prereq_any_tostr_(p->any.left, s);			/* left */
+	any_tostr(p->any.left, s);			/* left */
 	if (p->any.left && p->any.left->type != PR_FALSE)
 		*(*s)++ = ' ';
-	prereq_tostr_(p->any.right, s);				/* right */
+	prereq_tostr(p->any.right, s);				/* right */
 }
 
+/**
+ * Stringifies an ALL or TRUE prereq into a string buffer.
+ * Does not emit the parentheses.
+ */
 static void
-prereq_all_tostr_(const struct prereq *p, char **s)
+all_tostr(const struct prereq *p, char **s)
 {
 	while (p && p->type == PR_ALL) {
-		prereq_tostr_(p->all.left, s);			/* left */
+		prereq_tostr(p->all.left, s);			/* left */
 		if (!p->all.right || p->all.right->type != PR_TRUE)
 			*(*s)++ = ' ';
 		p = p->all.right;				/* right */
@@ -41,12 +51,16 @@ prereq_all_tostr_(const struct prereq *p, char **s)
 		*(*s)++ = '0';
 	else if (p->type != PR_TRUE) {
 		*(*s)++ = '?';
-		prereq_tostr_(p->all.left, s);
+		prereq_tostr(p->all.left, s);
 	}
 }
 
+/**
+ * Stringifies a prereq into a string buffer.
+ * Some erroneous and null forms stringify to "?" and "0".
+ */
 static void
-prereq_tostr_(const struct prereq *p, char **s)
+prereq_tostr(const struct prereq *p, char **s)
 {
 	stri i;
 
@@ -63,18 +77,18 @@ prereq_tostr_(const struct prereq *p, char **s)
 		break;
 	case PR_NOT:
 		*(*s)++ = '!';
-		prereq_tostr_(p->not, s);
+		prereq_tostr(p->not, s);
 		break;
 	case PR_ALL:
 	case PR_TRUE:
 		*(*s)++ = '(';
-		prereq_all_tostr_(p, s);
+		all_tostr(p, s);
 		*(*s)++ = ')';
 		break;
 	case PR_ANY:
 	case PR_FALSE:
 		*(*s)++ = '{';
-		prereq_any_tostr_(p, s);
+		any_tostr(p, s);
 		*(*s)++ = '}';
 		break;
 	default:
@@ -83,9 +97,15 @@ prereq_tostr_(const struct prereq *p, char **s)
 	}
 }
 
+/**
+ * Tests that the prerequisite stringifies to the string given.
+ * On failure, prints a detailed message and aborts.
+ *
+ * @param p        the prereq expression tree to stringify
+ * @param expected the stringification expected
+ */
 #define assert_prereq_eq(p, expected) \
 	assert_prereq_eq_(__FILE__, __LINE__, p, expected)
-
 static void
 assert_prereq_eq_(const char *file, unsigned lineno,
 		  const struct prereq *p, const char *expected)
@@ -94,9 +114,9 @@ assert_prereq_eq_(const char *file, unsigned lineno,
 	char *s = actual;
 
 	if (p && (p->type == PR_ALL || p->type == PR_TRUE))
-		prereq_all_tostr_(p, &s);
+		all_tostr(p, &s);
 	else
-		prereq_tostr_(p, &s);
+		prereq_tostr(p, &s);
 	*s = '\0';
 
 	if (strcmp(expected, actual) != 0) {
@@ -107,12 +127,12 @@ assert_prereq_eq_(const char *file, unsigned lineno,
 	}
 }
 
-/*
- * Checks that the prerequisite expression will be parsed
- * into a structure, and then unparsed back into a standard form
- * that should be the same.
+/**
+ * Checks that the prerequisite expression string can be parsed
+ * into an expression tree structure, then unparsed back into a
+ * standard form that is the same as that originally provided.
  */
-#define check_prereq(source) check_prereq_(__FILE__, __LINE__, source)
+#define check_prereq(source) check_prereq_(__FILE__,__LINE__,source)
 static void
 check_prereq_(const char *file, unsigned lineno, const char *source)
 {
@@ -129,7 +149,10 @@ check_prereq_(const char *file, unsigned lineno, const char *source)
 	prereq_free(p);
 }
 
-#define assert_parse_fail(source) assert_parse_fail_(__FILE__, __LINE__, source)
+/**
+ * Checks that a string fails to parse into an expression tree.
+ */
+#define assert_parse_fail(source) assert_parse_fail_(__FILE__,__LINE__,source)
 static void
 assert_parse_fail_(const char *file, unsigned lineno, const char *source)
 {
@@ -139,7 +162,7 @@ assert_parse_fail_(const char *file, unsigned lineno, const char *source)
 
 	if ((p = prereq_make(source_str, &error)) != 0 || error == 0) {
 		char result[2048], *s = result;
-		prereq_tostr_(p, &s);
+		prereq_tostr(p, &s);
 		*s = '\0';
 		fprintf(stderr, "%s:%d: expected failure but got success\n"
 				"  source: '%s'\n"

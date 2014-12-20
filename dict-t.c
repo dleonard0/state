@@ -1,7 +1,11 @@
 #include <assert.h>
 #include "dict.h"
 
+/* Dictionary unit tests */
+
+/** Global counter used to ensure that free functions are being called */
 static int counter;
+
 static void
 inc_counter(void *value)
 {
@@ -50,6 +54,7 @@ main(void) {
 		assert(dict_put(d, C, A) == 1);
 		assert(counter == 1);
 
+		/* Iterator tests */
 		r = 1;
 		di = dict_iter_new(d);
 		for (i = 0; i < 3; ++i) {

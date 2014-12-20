@@ -8,15 +8,15 @@
 #include "str.h"
 #include "nfa-dbg.h"
 
-static void assert_match_(const char *file, int lineno, int expect_accept,
-			  const char *globexp, ...)
-	__attribute__((sentinel));
-#define assert_accepts(...) assert_match_(__FILE__,__LINE__,1,__VA_ARGS__,NULL)
-#define assert_rejects(...) assert_match_(__FILE__,__LINE__,0,__VA_ARGS__,NULL)
+/* Unit tests for glob patterns */
 
-/* use this to invert the mode of accept_accepts()/accept_rejects() */
+/**
+ * A keyword string passed to #assert_accepts()/#assert_rejects() to indicate
+ * that the acceptance of subsequent terms should be inverted.
+ */
 static const char * const NOT = "NOT";
 
+/** Prints a representation of a compiled globs to stdout, for debugging */
 static void
 globs_dump(const struct globs *g, const char *gexp, int state)
 {
@@ -24,6 +24,21 @@ globs_dump(const struct globs *g, const char *gexp, int state)
 	nfa_dump(stdout, (const struct nfa *)g, state);
 	fflush(stdout);
 }
+
+/**
+ * Asserts that a glob expression compiles and then succeeds (or fails) to
+ * match the given test string(s).
+ *
+ * @param globexp  a C string that will be coverted into a glob DFA
+ * @param ...      test C strings that globexp will be matched against.
+ *                 The special value #NOT is used to reverse test sense
+ *                 of subsequent test strings.
+ */
+#define assert_accepts(...) assert_match_(__FILE__,__LINE__,1,__VA_ARGS__,NULL)
+#define assert_rejects(...) assert_match_(__FILE__,__LINE__,0,__VA_ARGS__,NULL)
+static void assert_match_(const char *file, int lineno, int expect_accept,
+			  const char *globexp, ...)
+	__attribute__((sentinel));
 
 static void
 assert_match_(const char *file, int lineno, int expect_accept,

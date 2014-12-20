@@ -4,6 +4,8 @@
 #include "atom.h"
 #include "scope.h"
 
+/* Unit tests for nestable scopes */
+
 int
 main(void)
 {

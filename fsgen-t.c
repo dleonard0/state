@@ -3,6 +3,13 @@
 #include "str.h"
 #include "fsgen.h"
 
+/* Unit tests for the filesystem generator implementation */
+
+/**
+ * Searches a list of matches for the string s.
+ *
+ * @returns @c NULL if s is not found in the match list
+ */
 static const struct match *
 mfind(const struct match *matches, const char *s)
 {
@@ -15,7 +22,12 @@ mfind(const struct match *matches, const char *s)
 	return m;
 }
 
-/* Find a match string that is deferred */
+/**
+ * Searches a list of matches for the deferred string s.
+ *
+ * @returns @c NULL if s is not found in the match list, or
+ *                  if s was found but it wasn't marked deferred.
+ */
 static const struct match *
 mfind_def(const struct match *matches, const char *s)
 {
@@ -25,7 +37,12 @@ mfind_def(const struct match *matches, const char *s)
 	return m;
 }
 
-/* Find a match string that is not deferred */
+/**
+ * Searches a list of matches for the non-deferred string s.
+ *
+ * @returns @c NULL if s is not found in the match list, or
+ *                  if s was found but it WAS marked deferred.
+ */
 static const struct match *
 mfind_undef(const struct match *matches, const char *s)
 {
@@ -35,6 +52,7 @@ mfind_undef(const struct match *matches, const char *s)
 	return m;
 }
 
+/** Frees a list of matches */
 static void
 matches_free(struct match **mp)
 {
@@ -59,6 +77,10 @@ main()
 		assert(mfind_def(matches, "./"));
 		assert(mfind_undef(matches, "."));
 
+		/*
+		 * NOTE: These tests assumes the filesystem actually
+		 * contains the file /bin/rm
+		 */
 		struct match *root_matches;
 		const struct match *root;
 		root = mfind_def(matches, "/");
@@ -73,7 +95,7 @@ main()
 		mp = fs_generate(&bin_matches, bin->str);
 		*mp = 0;
 		assert(mfind_undef(bin_matches, "/bin/rm"));
-	
+
 		matches_free(&bin_matches);
 		matches_free(&root_matches);
 		matches_free(&matches);

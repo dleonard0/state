@@ -4,11 +4,20 @@
 
 #include "str.h"
 
+/*
+ * Shared string segments.
+ *
+ * A str is a sequence of offset:len references into read-only
+ * char[] segments. When no string references a segment, the
+ * segment can be released.
+ */
+
 asm(".pushsection \".debug_gdb_scripts\", \"MS\",@progbits,1\n"
     ".byte 1\n"
     ".asciz \"str-gdb.py\"\n"
     ".popsection\n");
 
+/* XXX remove this */
 int str_count;
 
 /**
@@ -34,6 +43,11 @@ str_dealloc(str *s)
 	str_count--;
 }
 
+/**
+ * Releases a segment by decrementing its refs count.
+ * When the refs count goes to zero, then the
+ * segment is freed.
+ */
 static void
 release_seg(struct str_seg *seg)
 {
@@ -42,12 +56,6 @@ release_seg(struct str_seg *seg)
 		free(seg);
 	}
 }
-
-/*
- * A str is a sequence of offset:len references into read-only
- * char[] segments. When no string references a segment, the
- * segment can be released.
- */
 
 str **
 str_xcatsn(str **str_ret, const char *data, unsigned len)

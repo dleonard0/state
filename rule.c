@@ -9,18 +9,19 @@
 #include "expand.h"
 #include "prereq.h"
 
+/** Rule file parser context */
 struct rule_parse_ctxt {
-	const str *path;
-	const struct reader *fr;
-	void *fctxt;
-	void *rctxt;
-	struct rule *rule, **rp;
-	struct command **commandp;
-	struct varscope *scope;
-	unsigned errors;
+	const str *path;		/**< current filename being parsed */
+	const struct reader *fr;	/**< reader interface begin used */
+	void *fctxt;			/**< context to pass to fr->open */
+	void *rctxt;			/**< context to pass to fr->read */
+	struct rule *rule, **rp;	/**< linked list of rules so far */
+	struct command **commandp;	/**< where to append new commands */
+	struct varscope *scope;		/**< variable scope being assembled */
+	unsigned errors;		/**< error count */
 };
 
-/* Writes a string to stderr */
+/** Writes a str to stderr. Used during errors. */
 static void
 fput_str(FILE *f, const str *str)
 {
@@ -32,6 +33,8 @@ fput_str(FILE *f, const str *str)
 
 /*------------------------------------------------------------
  * Parser callbacks
+ *
+ * The callbacks fill in the #rule_parse_ctxt.
  */
 
 static void
@@ -234,6 +237,8 @@ static struct parser_cb rule_cb = {
 	rule_cb_error
 };
 
+/*------------------------------------------------------------*/
+
 struct rule **
 rules_parse(struct rule **rp, const struct str *path, struct varscope *scope,
 	    const struct reader *fr, void *fctxt)
@@ -254,14 +259,14 @@ rules_parse(struct rule **rp, const struct str *path, struct varscope *scope,
 	return rp;
 }
 
-/* Releases a location structure */
+/** Releases a location structure */
 static void
 location_fini(struct location *location)
 {
 	str_free(location->filename);
 }
 
-/* Releases a list of commands */
+/** Releases a linked list of commands */
 static void
 commands_free(struct command **cp)
 {
@@ -274,7 +279,6 @@ commands_free(struct command **cp)
 	}
 }
 
-/* Releases a single rule */
 void
 rule_free(struct rule *rule)
 {
@@ -287,7 +291,6 @@ rule_free(struct rule *rule)
 	free(rule);
 }
 
-/* Releases a list of rules */
 void
 rules_free(struct rule **rp)
 {

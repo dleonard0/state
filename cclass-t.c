@@ -4,7 +4,16 @@
 
 #include "cclass.h"
 
-/* Convert a unicode code point into a canonical representation */
+/**
+ * Converts a unicode code point into a canonical, printable representation.
+ *
+ * @param p   pointer into storage that will hold the representation
+ *            (storage boundary is unchecked)
+ * @param ch  the unicode character to represent
+ *
+ * @return pointer into the storage position immediately after the
+ *         representation stored at @a p.
+ */
 static char *
 ch_tostr(char *p, unsigned ch)
 {
@@ -36,8 +45,13 @@ ch_tostr(char *p, unsigned ch)
 	return p;
 }
 
-/* Converts a cclass into a canonical representation
- * Returns a (temporary) C string */
+/**
+ * Converts a cclass into a canonical representation.
+ *
+ * @param cc  the cclass to stringify.
+ *
+ * @returns pointer to a C string in temporary static storage.
+ */
 static const char *
 cclass_tostr(const cclass *cc)
 {
@@ -64,7 +78,16 @@ cclass_tostr(const cclass *cc)
 	return buf;
 }
 
-/** Tests if the cclass has the expected canonical representation */
+/**
+ * Tests if the cclass has the expected canonical representation.
+ * If it fails, an error message is printed out, and the function
+ * returns false.
+ *
+ * @param cc       the cclass to check
+ * @param expected the epected string representation
+ *
+ * @returns true if @a cc stringifies to the same string as @a expected.
+ */
 static int
 cclass_eqstr(const cclass *cc, const char *expected)
 {
@@ -77,12 +100,24 @@ cclass_eqstr(const cclass *cc, const char *expected)
 	}
 }
 
+/** Converts a number into a hexadecimal digit */
 static unsigned hexval(char c) { return c <= '9' ? c - '9' :
 					c <= 'F' ? c - 'A' + 10 :
 					           c - 'a' + 10; }
 
+/**
+ * Parses the string at s to consume a encoding of a unicode character.
+ * The encoding of @a s must be ASCII, with the following backlash escapes
+ * understood:
+ *
+ *     \0 \n \r \t \\ \xXX \uXXXX \u+XXXXXX
+ *
+ * @param s   pointer to a string index; the pointer will be advanced.
+ *
+ * @returns the code point of the unicode character parsed.
+ */
 static unsigned
-make_cclass_ch(const char **s)
+parse_char(const char **s)
 {
 	unsigned digs, r = 0;
 	char ch = *(*s)++;
@@ -103,7 +138,14 @@ make_cclass_ch(const char **s)
 	return ch;
 }
 
-/* test convenience: make a cclass from a string repr, eg "abc" */
+/**
+ * Makes a cclass from a string repr.
+ *   For example, "ac-y" -> {[a,b),[c,y)}.
+ * This is a convenience function for the unit tests.
+ * It does not understand inverses.
+ * It does not require square brackets.
+ * To get a hyphen, use a leading hypen.
+ */
 static cclass *
 make_cclass(const char *str)
 {
@@ -112,10 +154,10 @@ make_cclass(const char *str)
 	cclass *cc = cclass_new();
 
 	while (*s) {
-		lo = make_cclass_ch(&s);
+		lo = parse_char(&s);
 		if (*s == '-') {
 			if (!*++s) hi = MAXCHAR;
-			else       hi = make_cclass_ch(&s) + 1;
+			else       hi = parse_char(&s) + 1;
 		} else  {
 			hi = lo + 1;
 		}

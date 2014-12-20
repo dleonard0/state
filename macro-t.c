@@ -6,9 +6,16 @@
 #include "str.h"
 #include "macro.h"
 
-/*
- * Rough conversion of a macro to an (bounds-unchecked) char buffer
- * Returns pointer to the NUL byte written to the end of the buffer.
+/* Macro unit tests */
+
+/**
+ * Stringifies a macro into a char buffer.
+ * No bounds-checking!
+ *
+ * @param m   the macro to stringify
+ * @param buf where to store the stringified macro
+ *
+ * @returns pointer to the NUL byte written at the end of the buffer.
  */
 char *
 macro_to_s(const macro *m, char *buf)
@@ -56,6 +63,15 @@ macro_to_s(const macro *m, char *buf)
 	return buf;
 }
 
+/**
+ * Tests if the macro stringifies to the given string.
+ * Prints an error message if the strings differ.
+ *
+ * @param m  the macro to strigify
+ * @param s  the string to compare against the stringification of @a m
+ *
+ * @return 0 iff the strings differ.
+ */
 static int
 macro_eq(const macro *m, const char *s)
 {

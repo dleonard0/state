@@ -9,7 +9,7 @@ struct dict {
 	unsigned (*key_hash)(const void *key);
 	unsigned count;
 	struct entry {
-		struct entry *next;
+		struct entry *next;	/**< Single linked list per bucket */
 		const void *key;
 		void *value;
 	} *bucket[HASHSZ];
@@ -21,16 +21,20 @@ struct dict_iter {
 	unsigned b;
 };
 
+/** Default key comparator: compares by pointer address */
 static int
 default_cmp(const void *k1, const void *k2)
 {
 	return (char *)k1 - (char *)k2;
 }
 
+/** Default hash function: hashes key pointer addresses.  */
 static unsigned
 default_hash(const void *k)
 {
 	unsigned n = (unsigned)k;
+
+	/* Marsaglia's xorshift */
 	n ^= n >> 12;
 	n ^= n << 25;
 	n ^= n >> 27;

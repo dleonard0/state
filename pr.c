@@ -5,13 +5,16 @@
 #include "str.h"
 #include "pr.h"
 
+/* Log/message printing */
+
 enum verbosity verbosity = V_WARNING;
 
+/* Prefixes to printr at the various log levels */
 static const char *prefix[] = {
-	[V_ERROR] = "error: ",
+	[V_ERROR]   = "error: ",
 	[V_WARNING] = "warn: ",
 	[V_VERBOSE] = "",
-	[V_DEBUG] = "debug: ",
+	[V_DEBUG]   = "debug: ",
 };
 
 void

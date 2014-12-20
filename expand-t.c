@@ -10,32 +10,38 @@
 #include "expand.h"
 
 /*------------------------------------------------------------
- * test framework for expanding macros
+ * Let's begin with a test framework for expanding macros.
  *
- * This is a cut-down parser callback provider.
- * We construct a parser input of the form:
+ * This is a minimalist parser callback provider, so we can
+ * use #parse() to turn test strings into macro, store them in
+ * variables, and then expand those macros back into strings.
+ *
+ * The idea is to construct an in-memory 'file' of the form:
  *
  *     VAR1 = <value>
  *     VAR2 = <value>
- *     .macro <macro-under-text>
+ *     .macro <macro-beging-tested>
  *
- * When the parse completes, we have received the macro
- * through the (fake) .macro directive, and collected variables
- * in scope definitions along the way. Then the macro is expanded
- * and compared against the expected C string.
+ * When parsing this completes, we will have received the test macro
+ * through the (fake) .macro directive, and also collected variables
+ * into a scope definition along the way. The macro is simply
+ * expanded using the expand function (which is really what is being
+ * tested here) and the result compared against an expected C string.
  *
- * Some effort has been expended to display the parse input,
- * and the macro structure so that bugs are easier to fix.
+ * Some effort has been expended to in displaying descrepancies
+ * between the input and the resulting macro structure. This was to
+ * assist in fixing bugs.
  */
 
+/** My macro test parse context */
 struct mm {
-	const char *file;
-	int lineno;
-	const char * const *text;
-	unsigned texti;    /* next index into text[] */
-	const char *textp; /* current char pos in text[texti-1] */
-	macro *macro;
-	struct varscope *scope;
+	const char *file;	  /**< set to __FILE__ of #assert_expands() */
+	int lineno;		  /**< set to __LINE__ of #assert_expands() */
+	const char * const *text; /**< the faked file input */
+	unsigned texti;		  /**< next index into text[] */
+	const char *textp;	  /**< current char pos in text[texti-1] */
+	macro *macro;		  /**< receives value from .macro callback */
+	struct varscope *scope;	  /**< receives variable definitions */
 };
 
 static int
@@ -126,6 +132,13 @@ mm_error(struct parser *p, unsigned lineno, unsigned u8col, const char *msg)
 	abort();
 }
 
+/** Prints a unicode character in an unambiguous way, for debug.
+ *  The unicode character is printed in ASCII, using backslash escapes
+ *  to represent non-ASCII, unprintable ASCII, and the following
+ *  special characters (which don't normally appear in macros references):
+ *
+ *	<newline> \ ' $ ) ,
+ */
 static void
 print_char(FILE *f, int ch)
 {
@@ -144,6 +157,7 @@ print_char(FILE *f, int ch)
 		fprintf(f, "\\u+%06x", ch);
 }
 
+/** Prints an atom, for debug */
 static void
 print_atom(FILE *f, atom a)
 {
@@ -153,6 +167,7 @@ print_atom(FILE *f, atom a)
 	}
 }
 
+/** Prints a str, for debug. The string is assumed to be encoded in UTF-8 */
 static void
 print_str(FILE *f, str *s)
 {
@@ -162,6 +177,13 @@ print_str(FILE *f, str *s)
 	}
 }
 
+/**
+ * Prints a macro, using ANSI colour highlighting to indicate structure.
+ *    plain:     string part
+ *    fg yellow: atom part
+ *    fg blue:   reference metachars: "$(", "," and ")"
+ *    bg red:    corrupt structure
+ */
 static void
 print_macro(FILE *f, macro *m)
 {
@@ -191,12 +213,19 @@ print_macro(FILE *f, macro *m)
 			fprintf(f, "\033[34m)\033[m");
 			break;
 		default:
-			fprintf(f, "*ERROR*");
+			fprintf(f, "\033[41m*ERROR*\033[m");
 			break;
 		}
 	}
 }
 
+/**
+ * Asserts that the macro text expands into an expected string.
+ *
+ * @param text      the text to be parsed as a macro then expanded
+ * @param expected  the expected string value after expanding the parsed macro
+ * @param ...       optional "VAR=value\n" definitions for the var scope
+ */
 #define assert_expands(text, expected, ...) \
 	assert_expands_(__FILE__, __LINE__, expected, text, "" __VA_ARGS__)
 static void
@@ -256,7 +285,6 @@ assert_expands_(const char *file, int lineno,
 }
 
 
-
 int
 main()
 {
@@ -274,5 +302,6 @@ main()
 	assert_expands("a$(subst fofobar,M,$(X))c",	"afofofoMc",
 		       "X = fofofofofobar");
 	assert_expands("a$(subst ,b,x)c",		"axbc");
+
 	return 0;
 }

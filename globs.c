@@ -12,24 +12,32 @@ struct globs {
  * glob parser
  */
 
-/*
- * An intermediate sub-automaton generated during Thompson's
- * construction method.
+/**
+ * Intermediate automaton substructure.
+ * Subnfas are generated during Thompson's construction method.
  *
  * Implementation note: never return a subnfa with a *backwards*
  * epislon edge from exit to entry.
- * Although, a forward epsilon edge from entry to exit is OK.
- * This means that any subnfa returned can safely have a forward-
- * or backwards epsilon edge placed on it
+ * However, a forward epsilon edge from entry to exit is OK.
+ * Following this rule means that any subnfa returned can safely
+ * have a forward- or backwards epsilon edge added to it,
+ * without risk of identifying false epsilon equivalences.
  */
 struct subnfa {
         unsigned entry, exit;
 	const char *error;
 };
 
+static struct subnfa parse_sequence(struct nfa *nfa, stri *i); /* fwd decl */
+
 #define IS_ERROR_SUBNFA(sub) ((sub).error)
 
-/** Returns a pure-error subnfa. */
+/**
+ * Returns a pure "error" subnfa.
+ * This is a convenience function; callers normally pass a
+ * subnfa back to their caller; this one is empty, save 
+ * for holding an error message.
+ */
 static struct subnfa
 subnfa_error(const char *error)
 {
@@ -40,12 +48,10 @@ subnfa_error(const char *error)
 	return sub;
 }
 
-/*
- * Builds an empty subnfa frame, with
- * two newly allocated states, entry and exit
- * but no edges.  It is  ready for
- * other functions to construct some
- * matching automaton within it.
+/**
+ * Builds an empty subnfa frame, with two newly allocated states,
+ * entry and exit but no edges.  It is ready for other functions
+ * to construct some matching automaton within it.
  *
  *    ┌──────┐
  *    │frame │
@@ -62,10 +68,9 @@ subnfa_frame(struct nfa *nfa)
 	return sub;
 }
 
-/*
+/**
  * Builds a subnfa with the inner subnfa simply linked.
- * This is a helper function for constructing more
- * complicated subnfas.
+ * This is a helper function for constructing more complicated subnfas.
  *
  *    ┌───────────────┐
  *    │box            │
@@ -83,11 +88,10 @@ subnfa_box(struct nfa *nfa, struct subnfa inner)
 	return box;
 }
 
-/* Forward declaration for the globs parser */
-static struct subnfa parse_sequence(struct nfa *nfa, stri *i);
 
-/*
- * Parse one of: ?(.|..) *(.|..) +(.|..) @(.|..) !(.|..)
+/**
+ * Parses one of: "?(.|..)" "*(.|..)" "+(.|..)" "@(.|..)" "!(.|..)"
+ * into a subnfa.
  *
  * First the alt ::= (seq|..|seq) is parsed:
  *    ┌──────────────┐
@@ -161,7 +165,10 @@ parse_group(struct nfa *nfa, stri *i, unsigned kind)
 	return ret;
 }
 
-/* Parse a [...] character class; after the '[' has been consumed. */
+/**
+ * Parses a [...] character class.
+ * Assumes the leading '[' has been consumed, but consumes the trailing ']'.
+ */
 static struct subnfa
 parse_cclass(struct nfa *nfa, stri *i)
 {
@@ -228,7 +235,10 @@ parse_cclass(struct nfa *nfa, stri *i)
 	return sub;
 }
 
-/* Create the cclass corresponding to the globs "?" */
+/**
+ * Create the 'any' cclass corresponding to the glob "?".
+ * The resulting cclass matches any character except '/' and NUL.
+ */
 static cclass *
 question_cclass()
 {
@@ -238,9 +248,10 @@ question_cclass()
 	return cc;
 }
 
-/* Parses a non-sequence globs expression,
- *   ?(...) *(...) +(...) @(...) !(...)
- *   [...] * ? \c c
+/**
+ * Parses a single glob expression, such as
+ *   "?(...)" "*(...)" "+(...)" "@(...)" "!(...)"
+ *   "[...]" "*" "?" "\..." "c"
  */
 static struct subnfa
 parse_atom(struct nfa *nfa, stri *i)
@@ -284,15 +295,15 @@ parse_atom(struct nfa *nfa, stri *i)
 	return sub;
 }
 
-/*
- * Parses a sequence of globs atoms, finishing when
- * we hit a '|' or ')'.
- *    ┌──────────────────────────────────────────┐
- *    │seq                                       │
- *    │   ┌──────┐   ┌──────┐         ┌─────┐    │
- *    ○─ε→○ atom ●─ε→○ atom ●─ // ─ ε→○ atom ●─ε→●
- *    │   └──────┘   └──────┘         └─────┘    │
- *    └──────────────────────────────────────────┘
+/**
+ * Parses a sequence of glob atoms, finishing when
+ * we are about to consume a '|' or ')' or EOL.
+ *    ┌───────────────────────────────────────┐
+ *    │seq                                    │
+ *    │   ┌──────┐   ┌──────┐      ┌──────┐   │
+ *    ○─ε→○ atom ●─ε→○ atom ●─//─ε→○ atom ●─ε→●
+ *    │   └──────┘   └──────┘      └──────┘   │
+ *    └───────────────────────────────────────┘
  */
 static struct subnfa
 parse_sequence(struct nfa *nfa, stri *i)

@@ -9,35 +9,21 @@
 #include "str.h"
 #include "nfa-dbg.h"
 
-//#define DEBUG 1
+static int Debug;
 
 /*------------------------------------------------------------
- * constructors for trees and globs
+ * convenience constructors for trees and globs
  */
 
-/* auto-cleanup globs: GLOBS g = make_globs(...); */
+/**
+ * A type for automatically released globs. Usage:
+ *     GLOBS g = make_globs(...);
+ */
 #define GLOBS struct globs * __attribute((__cleanup__(globs_cleanup)))
-static void globs_cleanup(struct globs **g) { globs_free(*g); }
+
 #define make_globs(...) make_globs_(__FILE__, __LINE__, __VA_ARGS__, NULL)
 static struct globs *make_globs_(const char *file, int lineno, ...)
 	__attribute__((sentinel));
-
-/* A tree simulates a filesystem tree  */
-struct tree;
-#define TREE struct tree * __attribute((__cleanup__(tree_cleanup)))
-static void tree_cleanup(struct tree **node);
-#define make_tree(...) make_tree_(__FILE__, __LINE__, __VA_ARGS__, NULL)
-static struct tree *make_tree_(const char *file,int lineno,...)
-	__attribute__((sentinel));
-
-/* asserts that the globs applied to the tree match only the names given */
-#define assert_matches(globs, tree, ...) do {				\
-	const char *_expected[] = { __VA_ARGS__, 0 };			\
-	assert_matches_(__FILE__, __LINE__, globs, tree, _expected);	\
-    } while (0)
-static void assert_matches_(const char *file, int lineno,
-	struct globs *globs, struct tree *tree, const char **expected);
-
 static struct globs *
 make_globs_(const char *file, int lineno, ...)
 {
@@ -59,19 +45,42 @@ make_globs_(const char *file, int lineno, ...)
 		str_free(ss);
 	}
 	globs_compile(globs);
-#if DEBUG
-	fprintf(stderr, "%s:%d: globs:\n", file, lineno);
-	nfa_dump(stderr, (const struct nfa *)globs, 0);
-#endif
+	if (Debug) {
+		fprintf(stderr, "%s:%d: globs:\n", file, lineno);
+		nfa_dump(stderr, (const struct nfa *)globs, 0);
+	}
 	return globs;
 }
 
+static void globs_cleanup(struct globs **g) { globs_free(*g); }
+
+/*------------------------------------------------------------
+ * In-memory file tree
+ */
+
+/**
+ * A tree simulates a filesystem tree.
+ * It's an in-memory structure of 'directories' and 'files' for names only.
+ */
 struct tree {
 	const char *path;
 	unsigned pathlen;
 	struct tree *sibling, *child;
 };
 
+#define TREE struct tree * __attribute((__cleanup__(tree_cleanup)))
+
+/**
+ * Creates an in-memory filesystem tree from a list of /-separated
+ * pathnames. Interior directory nodes are automatically created.
+ *
+ * @param ... C strings indicating full paths, such as "a/b/c"
+ *
+ * @return the root of the tree structure.
+ */
+#define make_tree(...) make_tree_(__FILE__, __LINE__, __VA_ARGS__, NULL)
+static struct tree *make_tree_(const char *file,int lineno,...)
+	__attribute__((sentinel));
 static struct tree *
 make_tree_(const char *file, int lineno, ...)
 {
@@ -146,6 +155,7 @@ make_tree_(const char *file, int lineno, ...)
 	return root;
 }
 
+/** Releases a tree structure */
 static void
 tree_cleanup(struct tree **node)
 {
@@ -156,6 +166,31 @@ tree_cleanup(struct tree **node)
 		*node = sibling;
 	}
 }
+
+/** 
+ * Prints a tree structure, for human debug purposes.
+ *
+ * @param f       where to print the tree to
+ * @param node    the subtree to print
+ * @param prefix  the string to prefix each node name with
+ */
+static void
+dump_tree(FILE *f, const struct tree *node, char *prefix)
+{
+	for (; node; node = node->sibling) {
+	    fprintf(f, "  %s%.*s\n", prefix, node->pathlen, node->path);
+	    if (node->child) {
+		char buf[1024];
+		snprintf(buf, sizeof buf, "%s%.*s/", prefix,
+			node->pathlen, node->path);
+		dump_tree(f, node->child, buf);
+	    }
+	}
+}
+
+/*------------------------------------------------------------
+ * Implementation of the match generator callback interface.
+ */
 
 struct test_context {
 	int freed;
@@ -168,13 +203,13 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 	struct test_context *ctxt = gcontext;
 	stri i;
 
-#if DEBUG
-	fprintf(stderr, "  ");
-	for (i = stri_str(prefix); stri_more(i); stri_inc(i))
-		putc(stri_at(i), stderr);
-	if (!prefix) fprintf(stderr, "\"\"");
-	fprintf(stderr, ":\n");
-#endif
+	if (Debug) {
+		fprintf(stderr, "  ");
+		for (i = stri_str(prefix); stri_more(i); stri_inc(i))
+			putc(stri_at(i), stderr);
+		if (!prefix) fprintf(stderr, "\"\"");
+		fprintf(stderr, ":\n");
+	}
 	/*
 	 * Search the tree for the prefix, then return a list of the
 	 * found node's children.
@@ -217,14 +252,14 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 			newm->flags |= MATCH_DEFERRED;
 		*mp = newm;
 		mp = &newm->next;
-#if DEBUG
-		fprintf(stderr, "    ");
-		for (i = stri_str(newm->str); stri_more(i); stri_inc(i))
-			putc(stri_at(i), stderr);
-		if (newm->flags & MATCH_DEFERRED)
-			fprintf(stderr, " ...");
-		fprintf(stderr, "\n");
-#endif
+		if (Debug) {
+			fprintf(stderr, "    ");
+			for (i = stri_str(newm->str); stri_more(i); stri_inc(i))
+				putc(stri_at(i), stderr);
+			if (newm->flags & MATCH_DEFERRED)
+				fprintf(stderr, " ...");
+			fprintf(stderr, "\n");
+		}
 	};
 	return mp;
 }
@@ -242,22 +277,18 @@ static struct generator test_generator = {
 	.free = test_free,
 };
 
-#if DEBUG
-static void
-dump_tree(FILE *f, const struct tree *node, char *prefix)
-{
-	for (; node; node = node->sibling) {
-	    fprintf(f, "  %s%.*s\n", prefix, node->pathlen, node->path);
-	    if (node->child) {
-		char buf[1024];
-		snprintf(buf, sizeof buf, "%s%.*s/", prefix,
-			node->pathlen, node->path);
-		dump_tree(f, node->child, buf);
-	    }
-	}
-}
-#endif
-
+/**
+ * Asserts that the globs applied to the tree match only the names given
+ * Aborts on failure.
+ *
+ * @param globs   the glob set
+ * @param tree    the tree to match globs against
+ * @param ...     The C strings that are only expected to be in the result set.
+ */
+#define assert_matches(globs, tree, ...) do {				\
+	const char *_expected[] = { __VA_ARGS__, 0 };			\
+	assert_matches_(__FILE__, __LINE__, globs, tree, _expected);	\
+    } while (0)
 static void
 assert_matches_(const char *file, int lineno,
 	struct globs *globs, struct tree *tree, const char **expected)
@@ -266,10 +297,10 @@ assert_matches_(const char *file, int lineno,
 	struct test_context tctxt;
 	unsigned i;
 
-#if DEBUG
-	fprintf(stderr, "%s:%d: tree:\n", file, lineno);
-	dump_tree(stderr, tree, "");
-#endif
+	if (Debug) {
+		fprintf(stderr, "%s:%d: tree:\n", file, lineno);
+		dump_tree(stderr, tree, "");
+	}
 
 	/* count the number of expected strings */
 	e = expected;
@@ -302,9 +333,8 @@ assert_matches_(const char *file, int lineno,
 	tctxt.freed = 0;
 	tctxt.tree = tree;
 
-#if DEBUG
-	fprintf(stderr, "%s:%d: matching...\n", file, lineno);
-#endif
+	if (Debug)
+		fprintf(stderr, "%s:%d: matching...\n", file, lineno);
 
 	struct matcher *matcher = matcher_new(globs, &test_generator, &tctxt);
 	unsigned matchremain = nexpected;
@@ -313,15 +343,16 @@ assert_matches_(const char *file, int lineno,
 	while (!error) {
 		const void *ref = 0;
 		str *result = matcher_next(matcher, &ref);
-#if DEBUG
-		fprintf(stderr, "  * ");
-		stri si;
-		for (si = stri_str(result); stri_more(si); stri_inc(si))
-			putc(stri_at(si), stderr);
-		if (!result) fprintf(stderr, "(null)");
-		if (result && ref) fprintf(stderr, " = %s", (const char *)ref);
-		fprintf(stderr, "\n");
-#endif
+		if (Debug) {
+			fprintf(stderr, "  * ");
+			stri si;
+			for (si = stri_str(result); stri_more(si); stri_inc(si))
+				putc(stri_at(si), stderr);
+			if (!result) fprintf(stderr, "(null)");
+			if (result && ref)
+				fprintf(stderr, " = %s", (const char *)ref);
+			fprintf(stderr, "\n");
+		}
 		if (matchremain == 0) {
 			if (result) {
 				fprintf(stderr, "%s:%d: "
@@ -377,9 +408,18 @@ assert_matches_(const char *file, int lineno,
 	matcher_free(matcher);
 }
 
+/** Tests an environment variable e is set to indicate true */
+static int
+testenv(const char *e)
+{
+	char *c = getenv(e);
+	return c && *c && *c != '0' && *c != 'n';
+}
+
 int
 main()
 {
+	Debug = testenv("DEBUG");
 
 	{
 		GLOBS g = make_globs("a=1");

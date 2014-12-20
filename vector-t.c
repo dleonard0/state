@@ -1,6 +1,8 @@
 #include <assert.h>
 #include "vector.h"
 
+/* Vector tests */
+
 int
 main()
 {

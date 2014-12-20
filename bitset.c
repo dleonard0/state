@@ -50,7 +50,9 @@ _bitset_next(const bitset *s, unsigned i)
 	return i;
 }
 
-/* Count the number of elements inside the index'th element */
+/**
+ * Counts the number of elements inside the index'th group of elements.
+ */
 static unsigned
 count_el(const bitset *s, unsigned index)
 {

@@ -9,11 +9,18 @@ static void atom_atexit(void);
 
 /*
  * The atom dictionary maps NUL-terminated C string keys to
- * struct str_seg values.
+ * pointers to unique struct str_seg values.
  */
 static const char empty_atom[1];
 static struct dict *atom_global_dict;
 
+/**
+ * A simple hash function over nul-terminated C strings.
+ * TODO find a better hashing function
+ *
+ * @return an unsigned integer which is a hash over the
+ *         content of the C string.
+ */
 static unsigned
 strhash(const char *s)
 {
@@ -25,6 +32,12 @@ strhash(const char *s)
 	return h;
 }
 
+/**
+ * Decrements the reference count of a shared segment.
+ * Frees the segment when nothing refers to it.
+ * This is used as the free function in the atom dictionary.
+ * XXX It is too coupled to the implementation of #str_free().
+ */
 static void
 str_seg_release(struct str_seg *seg)
 {
@@ -33,7 +46,9 @@ str_seg_release(struct str_seg *seg)
 	}
 }
 
-
+/**
+ * Releases the atom dictionary, to be called during #exit().
+ */
 static void
 atom_atexit()
 {
@@ -41,6 +56,12 @@ atom_atexit()
 	atom_global_dict = 0;
 }
 
+/**
+ * Obtain or create a pointer to the global atom dictionary.
+ * (Singleton factory)
+ *
+ * @returns the global atom dictionary.
+ */
 static struct dict *
 atom_dict()
 {
