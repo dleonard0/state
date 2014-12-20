@@ -17,9 +17,6 @@ asm(".pushsection \".debug_gdb_scripts\", \"MS\",@progbits,1\n"
     ".asciz \"str-gdb.py\"\n"
     ".popsection\n");
 
-/* XXX remove this */
-int str_count;
-
 /**
  * Allocates an unintialized str component.
  * @return the allocation, never @c NULL.
@@ -28,7 +25,6 @@ static str *
 str_alloc()
 {
 	str *s = malloc(sizeof (str));
-	str_count++;
 	return s;
 }
 
@@ -40,7 +36,6 @@ static void
 str_dealloc(str *s)
 {
 	free(s);
-	str_count--;
 }
 
 /**

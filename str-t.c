@@ -5,8 +5,6 @@
 
 /* String unit tests */
 
-extern int str_count;
-
 int
 main(void)
 {
@@ -276,9 +274,6 @@ main(void)
 		str_free(t);
 		str_free(s);
 	}
-
-
-	assert(str_count == 0);
 
 	return 0;
 }
