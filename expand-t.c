@@ -76,7 +76,7 @@ mm_define(struct parser *p, macro *lhs, int defkind, macro *text,
 {
 	struct mm *mm = parser_get_context(p);
 
-	// only support defines of the form NAME=... for testing
+	/* only support defines of the form NAME=... for testing */
 	assert(defkind == DEFKIND_DELAYED);
 	assert(lhs && lhs->type == MACRO_STR && !lhs->next);
 
@@ -258,7 +258,7 @@ assert_expands_(const char *file, int lineno,
 		fprintf(stderr, "%s:%d: unexpected macro expansion\n"
 		                "  expected '",
 			mm.file, mm.lineno);
-		print_atom(stderr, expected); // not really an atom, but ok
+		print_atom(stderr, expected); /* not really an atom, but ok */
 		fprintf(stderr, "'\n  actual   '");
 		print_str(stderr, actual);
 		fprintf(stderr, "'\n  macro    '");

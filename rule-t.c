@@ -86,7 +86,7 @@ main()
 			"\tcmd2\n"
 			);
 		*rp = 0;
-		// TODO more tests
+		/* TODO more tests */
 
 		rules_free(&rules);
 	}

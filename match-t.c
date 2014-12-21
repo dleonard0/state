@@ -235,7 +235,7 @@ test_generate(struct match **mp, const str *prefix, void *gcontext)
 	    for (; node; node = node->sibling)
 		if (node->pathlen == plen && strncmp(node->path, p, plen) == 0)
 			break;
-	    assert(node); // abort if called with a deferred we never gen'd
+	    assert(node); /* abort if called with a deferred we never gen'd */
 	    node = node->child;
 	    p += plen;
 	}

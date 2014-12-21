@@ -93,12 +93,12 @@ main()
 {
 	/* reference constants for testing */
 	const void * const refA = "A";
-	//const void * const refB = "B";
-	//const void * const refC = "C";
 
-	// matches were known to go into infinite loops
-	// so ask for a SIGALRM in 5 seconds
-	//alarm(5);
+	/*
+	 * Match tests were known to go into infinite loops
+	 * so ask for a SIGALRM in 5 seconds
+	 */
+	/*alarm(5);*/
 
 	{
 		STR empty_str = str_new("");

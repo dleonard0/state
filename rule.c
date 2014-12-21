@@ -150,7 +150,7 @@ out:
 static void
 rule_cb_directive(struct parser *p, atom ident, macro *text, unsigned lineno)
 {
-	// struct rule_parse_ctxt *rpctxt = parser_get_context(p);
+	/* struct rule_parse_ctxt *rpctxt = parser_get_context(p); */
 	macro_free(text);
 }
 
