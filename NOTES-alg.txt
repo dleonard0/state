@@ -1,51 +1,141 @@
 
-Let a <state> be the pair <path>@<stateid>.
-
-Each rule describes:
-
-   * one possible transition to a state
-   * the prexisting states that have to have been obtained first
-   * a list of commands to run to transition to the state
-
-Together all transitions form a graph radiating out from the desired
-goal state. We want various modes:
-
-  1) optimal transition found by searching outwards for the closest
-     set of established statset of established state
-  2) try optimal transitions, but if a transition fails, restart
-     after making the failed transition more costly.
-  3) after reaching the goal state, continuously observe it, and
-     when it changes, re-effect the transition
-
-Locking
-
-  If two programs are trying to modify the same path (e.g. as part of an
-  incidental transition) then we need to have locked the state file so
-  they don't clobber each other.  If the program notices a state file has
-  been locked, then it should try choosing transitions in other (unlocked)
-  paths instead.
-
-  Let's say a transition is in progress and the state file is modified by a
-  (bad) process that didn't honour locking. What to do? Can't ignore it.
-  I think we should just abort the transition process.
-
-Graph construction algorithm (Dijkstra's).
-
-   1. start with the set F containing just the goal state, G.
-      mark the state G has having distance 0.
-   2. choose a state S from F
-       - if S has been reached, then 
+These are my notes on developing a suitable operational algorithm 
+for the state tool.
 
 
+Given:
+  a collection of rules ( g:P;E ... ), where each rule is of the form g:P;E 
+      where g is a goal state, 
+            P is a prerequisite expression (see below), and
+            E is a process (script), and
+  an environment V which maps goals into boolean "met" states,
 
-a: b1 b2 & b3
-b1: c1 c2
-b2: c3    __b2___c3
-b3: c4   /
-        *___b3___c4
-       /
-      a 
-       \ 
-        b1__c2
-         \
-	  c1
+We want to find:
+  an algorithm that will determine:
+          the sequence of processes to execute, and
+          the sequence of reads and writes on V
+          so as to satisfy a prequisite expression P*.
+
+
+Some vocabulary
+
+ Execution:	invocation of a process that may modify V and that
+		after some finite time either fails or succeeds.
+
+ Prerequisite:	a predicate expressions involving goal states with
+ 		respect to an environment V. It can be interpreted as
+		a desired outcome, or as an exepression to evaluate
+		against an environment.
+
+
+Canonical prerequisite expressions
+
+  The prerequisite predicate expressions are:
+
+	( P ... )       all Ps must be satisfied for (P...) to be satisfied
+	{ P ... }       any P must be satisfied for {P...} to be satisfied
+	! P             !P is satisfied when P is not; and vice versa
+	g               g is satisfied when it is met (in an environment)
+
+  Without loss of generality, we can restrict the (P...) and {P...} forms
+  to having exactly two members, so long as we also introduce two extra
+  primitive expressions, {} and (). We can also keep using the arbitrary-length
+  notation as shorthand for a canonicalized binary form. Thus:
+
+	( a b c )  ===  (a (b (c ())))
+	{ a b c }  ===  {{{{} a} b} c}
+
+  The canonical expressions are then:
+
+  	( P Q )		satisfied when both P and Q are satisfied
+  	{ P Q }		satisfied when either P or Q are satisfied
+	()		always satisfied
+	{}		never satisfied
+	! P		satisfied only when P is not satisfied
+	g		satisfied when g is met
+
+
+Developing the algorithm
+
+  Having established the structure of prerequisites and some vocabulary
+  of terms, we can consider how the algorithm might work.
+
+  I think a primary output should be a *plan* of what the system will do,
+  clearly indicating what mechanistic decisions need to be made. This would
+  allow problems like infeasibility to be detected before execution, and
+  also allow parallelization (since the plan is immutable). We should also
+  consider accommodating infinite plans; that is cycles or loops.
+
+  I propose the first step in the algorithm is to generate a graph of nodes
+  indicating the compressed state lattice. Each node is either
+  	- a unique(!) concrete 'transition' process, or
+	- an any/all node (unique for its subgraphs).
+  Edges indicate wait-dependencies.
+
+	#1			#2			#3
+
+  	a: (b (c ()))		a: {{{} b} c}		a: (b (c ()))
+	b: c			b: a			b:
+	c:    						c: b
+				          ⊥
+					 ↗
+	       b		       ∨₄		       b ←━━╮
+	      ↗ ↘		      ↗  ↘		      ↗     │
+	a → ∧₁   c		a → ∨₃    b ╮		a → ∧₅    c ╯
+	      ↘ ↗		↑     ↘     │		      ↘  ↗
+	       ∧₂		│      c    │		       ∧₆
+	        ↘		│           │		         ↘
+	         ⊤		╰━━━━━━━━━━━╯		          ⊤
+
+	∧₁ = (b ∧₂)		∨₃ = {∨₄ c}		∧₅ = (b ∧₆)
+	∧₂ = (c ⊤)		∨₄ = {⊥ b}		∧₆ = (c ⊤)
+	 ⊤ = ()			 ⊥ = {}
+
+  In graph #1, it is clear that an imaginary vertical line drawn to the right
+  of the graph can be "worked" leftwards as leaf nodes are tested as met, or
+  transitioned. The work order may be: c ⊤, b ∧₂, ∧₁, a. In graph #2 though,
+  it is not clear if 'a' can ever be reached, because of the cycle at 'b'.
+  Handling cycles may simply mean replacing b with ⊥ since we can assume 'a'
+  is unmet. Compare this with #1, where state b depends on c which is probably
+  (but not necessarily!) met.
+
+My early plan for the algorithm was that it convert the prerequisite
+expression into a graph of blocked transition processes; each node in the
+graph corresponding to a process invoked to wait for the satisfication
+of its children nodes.
+This has the powerful merit of being easy to understand; however
+it has problems equivalent to that of a weakly-typed language: infeasibility
+is only discovered at the moment it is attempted.
+
+
+Parallelism and Cancelable processes
+
+  Let's say that a transition to 't' can be marked as able to be canceled
+  at any time without consequence, and that is done with a SIGTERM signal.
+  We might denote it like so:
+
+	.MORTAL -TERM t
+	t: a b ...; ...
+
+  Specifically, take this to means that sending a SIGTERM to an
+  already-started transition process means the process outcome can be
+  ignored, and (most importantly) the transition to t is not recorded.
+  We can arrange for this since we hold the writelock on the t state file.
+
+  With the 'mortality' property, we can now adjust the meaning of
+  some prerequisite expressions when a mortal t appears:
+
+	(t U)		-- mortal t will be run concurrently with U;
+			   if U fails, then t is canceled.
+			   if U succeeds then we wait for t to complete.
+	{S t}		-- mortal t will be run concurrently with S
+			   if S succeeds, then t is canceled.
+			   if S fails then we wait for t to complete.
+
+
+Statecharts
+
+  Are these useful? Can we use them?
+
+  http://www.wisdom.weizmann.ac.il/~harel/papers/Statecharts.pdf
+
