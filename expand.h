@@ -34,7 +34,7 @@ struct str **expand_macro(struct str**str_ret, const struct macro *macro,
  * @returns address of the last (uninitialized) #str.next pointer in
  *          the string, or @a str_ret parameter. See #str_xcat().
  */
-struct str **expand_var(struct str**str_ret, const struct var *var, 
+struct str **expand_var(struct str**str_ret, const struct var *var,
 	const struct varscope *scope);
 
 #endif /* expand_h */

@@ -31,7 +31,7 @@ typedef str **(*func_t)(str **x, unsigned argc, const str **args,
  * @see #func_t
  */
 static str **
-func_subst(str **x, unsigned argc, const str **args, 
+func_subst(str **x, unsigned argc, const str **args,
 	   const struct varscope *scope)
 {
 	const str *FROM = args[1];

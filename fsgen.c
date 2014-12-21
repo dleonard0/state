@@ -17,7 +17,7 @@ fs_generate(struct match **mp, const str *prefix)
 	atom slash = atom_s("/");
 
 	if (!prefix) {
-		/* Add the root entry, / */ 
+		/* Add the root entry, / */
 		m = match_new(atom_to_str(slash));
 		m->flags |= MATCH_DEFERRED;
 		*mp = m;

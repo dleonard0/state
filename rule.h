@@ -40,7 +40,7 @@ struct rule {
 /**
  * Parses rules and definitions from a file and returns
  * a list of rules.
- * 
+ *
  * @param rp    where to store the list of rules
  * @param path  path of the file to read rules from
  * @param scope a scope to use and modify

@@ -167,7 +167,7 @@ tree_cleanup(struct tree **node)
 	}
 }
 
-/** 
+/**
  * Prints a tree structure, for human debug purposes.
  *
  * @param f       where to print the tree to

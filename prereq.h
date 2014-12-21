@@ -32,16 +32,16 @@ struct prereq {
 /**
  * Create a prereq expression tree from a string representation
  * @param str           the string to parse into a prerequisite tree
- * @param error_return  where to store an error string, when 
+ * @param error_return  where to store an error string, when
  *                      @c NULL is returned
  * @returns a prereq tree, or @c NULL on error
  */
-struct prereq *	prereq_make(const struct str *str, 
+struct prereq *	prereq_make(const struct str *str,
 			    const char **error_return);
 
 /**
  * Releases storage associated with the prereq
  */
-void 		prereq_free(struct prereq *p);
+void		prereq_free(struct prereq *p);
 
 #endif /* prereq_h */

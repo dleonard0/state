@@ -34,7 +34,7 @@ struct nfa {
 
 
 /**
- * Initializes existing graph storage. 
+ * Initializes existing graph storage.
  * The nfa must later be finialized by passing it to #nfa_fini().
  *
  * @param nfa	the nfa to initialize to empty

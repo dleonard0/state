@@ -15,7 +15,7 @@ struct varscope {
 
 static inline struct varscope *
 varscope_new(struct varscope *outer) {
-	return (struct varscope *)scope_new((struct scope *)outer, 
+	return (struct varscope *)scope_new((struct scope *)outer,
 		(void (*)(void *))var_free);
 }
 

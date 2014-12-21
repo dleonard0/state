@@ -7,7 +7,7 @@ struct str;
 /**
  * Generates candidate match objects from the filesystem.
  * The initial blank prefix expands to the content of the
- * current directory, plus /. 
+ * current directory, plus /.
  *
  * @param mp      pointer to storage to hold the resulting
  *                match list

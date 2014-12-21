@@ -35,7 +35,7 @@ static struct subnfa parse_sequence(struct nfa *nfa, stri *i); /* fwd decl */
 /**
  * Returns a pure "error" subnfa.
  * This is a convenience function; callers normally pass a
- * subnfa back to their caller; this one is empty, save 
+ * subnfa back to their caller; this one is empty, save
  * for holding an error message.
  */
 static struct subnfa

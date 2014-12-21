@@ -28,12 +28,12 @@ extern enum verbosity {
 
 struct location;	/* forward decl */
 
-#define prl(level, loc, ...)	do { 				\
+#define prl(level, loc, ...)	do {				\
 	const enum verbosity _v = (level);			\
-	if (_v >= verbosity) 					\
+	if (_v >= verbosity)					\
 		prl_(__FILE__, __LINE__, _v, loc, __VA_ARGS__);	\
     } while (0)
-void prl_(const char *file, int line, 
+void prl_(const char *file, int line,
 	enum verbosity level, const struct location *loc,
 	const char *fmt, ...)
 	__attribute__((format(printf,5,6)));

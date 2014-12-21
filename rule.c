@@ -82,7 +82,7 @@ rule_cb_define(struct parser *p, macro *lhs, int defkind, macro *text,
 	}
 
 	switch (defkind) {
-	case DEFKIND_WEAK: 
+	case DEFKIND_WEAK:
 		var = varscope_get(rpctxt->scope, varname);
 		if (var) {
 			/* var was already set; do nothing */
@@ -130,7 +130,7 @@ rule_cb_define(struct parser *p, macro *lhs, int defkind, macro *text,
 			break;
 		case VAR_DELAYED:
 			/* Walk to the end of the stored macro value */
-			mp = &var->delayed; 
+			mp = &var->delayed;
 			while (*mp) {
 				mp = &(*mp)->next;
 			}

@@ -44,7 +44,7 @@ macro_list_dealloc(struct macro_list *ml)
 
 
 /*------------------------------------------------------------
- * constructors, destructors 
+ * constructors, destructors
  */
 
 struct macro *
@@ -166,7 +166,7 @@ macro_rtrim(macro **mp)
 
 /**
  * Roughly splits a macro in-place at the first non-atomic whitespace.
- * Only "toplevel" whitespace is found (i.e. doesn't search 
+ * Only "toplevel" whitespace is found (i.e. doesn't search
  * inside $(...) refs).
  *
  * @param   mp  the macro to truncate at the first non-atomic whitespace

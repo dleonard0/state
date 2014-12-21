@@ -166,7 +166,7 @@ could_read_(struct parser *p, const char *s, int len)
  * If @a s is not immediately next on the input, this function
  * has no effect. Otherwise, the string is conumed and the
  * input pointer is advanced past it.
- * 
+ *
  * @param p  the parser
  * @param s  the C string to be consumed
  *
@@ -186,7 +186,7 @@ can_read_(struct parser *p, const char *s, int len)
 
 /**
  * Test if the given string could be consumed as the next "word".
- * That is, test if the string is present AND it 
+ * That is, test if the string is present AND it
  * would be followed immediately by a non-alnum or EOF.
  * This allows us to check for identifiers that are not part of
  * a longer identifier.
@@ -194,7 +194,7 @@ can_read_(struct parser *p, const char *s, int len)
  * @param p  the parser context
  * @param s  the word you're looking for (a literal constant)
  *
- * @return true iff the string could be consumed and it would 
+ * @return true iff the string could be consumed and it would
  *              be followed by a non-alnum character, or EOF
  */
 #define could_read_w(p, s) could_read_w_(p, s, sizeof s - 1)
@@ -228,7 +228,7 @@ can_read_w_(struct parser *p, const char *s, int len)
 	}
 }
 
-/** 
+/**
  * Skips over any whitespace (but not newline) characters on input.
  *
  * @param p the parser
@@ -243,7 +243,7 @@ skip_sp(struct parser *p)
 	return ch;
 }
 
-/** 
+/**
  * Skips over any whitespace (newline included) on input.
  *
  * @param p the parser
@@ -534,7 +534,7 @@ is_close(int ch, unsigned close)
  * @param p	the parser context
  * @param close flag bits indicating what characters to stop on.
  * @param mp    pointer to where to store the resulting terminated macro.
- *              The caller should initialize this to @c NULL then 
+ *              The caller should initialize this to @c NULL then
  *		deallocate/take the pointer on return, regardless of the
  *              return code.
  * @returns 1 on success, 0 on failure
